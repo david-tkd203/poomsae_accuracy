@@ -1,0 +1,10 @@
+# Ignorar la carpeta data
+data/
+
+# Ignorar archivos y carpetas de pycache
+__pycache__/
+*/__pycache__/
+
+# Ignorar archivos .pyc
+*.pyc
+*/**/*.pyc

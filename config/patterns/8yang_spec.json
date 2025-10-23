@@ -1,0 +1,230 @@
+{
+    "poomsae": "8yang",
+    "aka": ["Taegeuk Pal Jang", "8 Jang"],
+    "symbol": "Gon (Tierra)",
+    "steps_total": 24,
+    "conventions": {
+        "levels": ["ARAE","MOMTONG","OLGUL"],
+        "stances": {
+        "ap_kubi": "ap kubi / front stance",
+        "dwit_kubi": "dwit kubi / back stance",
+        "beom_seogi": "beom seogi / tiger stance"
+        },
+        "turn": ["NONE","LEFT_90","LEFT_180","LEFT_270","RIGHT_90","RIGHT_180","RIGHT_270"],
+        "travel": ["step","slide","pivot","jump","shift"]
+    },
+    "moves": [
+        { "idx":1, "sub":"a",
+        "tech_kor":"Kodureo Momtong Bakkat Makki",
+        "tech_es":"Bloqueo medio externo apoyado",
+        "stance_code":"dwit_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"step",
+        "start_face":"S","end_face":"S",
+        "notes":"Preparación en dwit kubi a la izquierda."
+        },      
+        { "idx":1, "sub":"b",
+        "tech_kor":"Momtong Baro Jireugi (R)",
+        "tech_es":"Puño medio directo derecho",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"shift",
+        "start_face":"S","end_face":"S",
+        "notes":"Transición a ap kubi; cadera cuadrada."
+        },          
+
+        { "idx":2, "sub":"a",
+        "tech_kor":"Dubal Dang-sang Ap Chagi (kihap)",
+        "tech_es":"Doble patada frontal en salto (kihap)",
+        "stance_code":"ap_kubi","level":"MOMTONG→OLGUL","lead":"L","turn":"NONE","travel":"jump",
+        "start_face":"S","end_face":"S",
+        "notes":"Secuencia dos ap-chagi encadenadas, segunda alta."
+        },                                                                                  
+        { "idx":2, "sub":"b",
+        "tech_kor":"Momtong An Makki (L)",
+        "tech_es":"Bloqueo medio interno izquierdo",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"step",
+        "notes":"Aterriza en ap kubi."
+        },                                                                   
+        { "idx":2, "sub":"c",
+        "tech_kor":"Momtong Dubeon Jireugi (R→L)",
+        "tech_es":"Doble puño medio (derecha→izquierda)",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"NONE"
+        }, 
+
+        { "idx":3,
+        "tech_kor":"Momtong Baro Jireugi (R)",
+        "tech_es":"Avanza y puño medio derecho",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"R","turn":"NONE","travel":"step"
+        },                                                                              
+
+        { "idx":4,
+        "tech_kor":"Arae Makki (L) + Olgul Bakkat Makki (R)",
+        "tech_es":"Bloqueo bajo izq. + bloqueo alto externo der. simultáneo",
+        "stance_code":"dwit_kubi","level":"ARAE+OLGUL","lead":"L","turn":"LEFT_270","travel":"pivot",
+        "start_face":"S","end_face":"E"
+        },                                                                                                 
+
+        { "idx":5,
+        "tech_kor":"Dankyo Teok Jireugi (R)",
+        "tech_es":"Uppercut de tracción al mentón derecho",
+        "stance_code":"ap_kubi","level":"OLGUL","lead":"L","turn":"NONE","travel":"step",
+        "notes":"‘Sacar’ brazo izq. (agarre) y golpear hacia arriba."
+        },                                                                                                 
+
+        { "idx":6,
+        "tech_kor":"Arae Makki (R) + Olgul Bakkat Makki (L)",
+        "tech_es":"Bloqueo bajo der. + alto externo izq. simultáneo",
+        "stance_code":"dwit_kubi","level":"ARAE+OLGUL","lead":"R","turn":"RIGHT_180","travel":"cross-step"
+        },                                                                                                 
+
+        { "idx":7,
+        "tech_kor":"Dankyo Teok Jireugi (L)",
+        "tech_es":"Uppercut de tracción al mentón izquierdo",
+        "stance_code":"ap_kubi","level":"OLGUL","lead":"R","turn":"NONE","travel":"step"
+        },                                                                                                
+
+        { "idx":8, "sub":"a",
+        "tech_kor":"Sonnal Momtong Makki (ssang) ",
+        "tech_es":"Doble bloqueo de cuchillo a medio",
+        "stance_code":"dwit_kubi","level":"MOMTONG","lead":"R","turn":"RIGHT_270","travel":"step"
+        },                                                                                                 
+        { "idx":8, "sub":"b",
+        "tech_kor":"Momtong Baro Jireugi (R)",
+        "tech_es":"Puño medio derecho tras paso a ap kubi",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"step"
+        },                                                                                                 
+
+        { "idx":9, "sub":"a",
+        "tech_kor":"Ap Chagi (R)",
+        "tech_es":"Patada frontal derecha",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"step"
+        },                                                                                                 
+        { "idx":9, "sub":"b",
+        "tech_kor":"Batangson Eolgul Makki (R)",
+        "tech_es":"Bloqueo con palma a alto (derecha) en beom seogi",
+        "stance_code":"beom_seogi","level":"OLGUL","lead":"R","turn":"NONE","travel":"slide",
+        "notes":"Entrada a beom seogi (cat stance)."
+        },                                                                                                 
+
+        { "idx":10,
+        "tech_kor":"Ssang Sonnal Momtong Makki (beom)",
+        "tech_es":"Doble bloqueo de cuchillo en beom seogi (90° izq.)",
+        "stance_code":"beom_seogi","level":"MOMTONG","lead":"L","turn":"LEFT_90","travel":"pivot"
+        },                                                                                                 
+
+        { "idx":11, "sub":"a",
+        "tech_kor":"Ap Chagi (L) → Ap Kubi",
+        "tech_es":"Frontal izquierda y caída a ap kubi",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"step"
+        },                                                                                                
+        { "idx":11, "sub":"b",
+        "tech_kor":"Momtong Baro Jireugi (R) + Retiro a Beom",
+        "tech_es":"Puño medio derecho; recoge a beom seogi con palma izq.",
+        "stance_code":"beom_seogi","level":"MOMTONG/OLGUL","lead":"L","turn":"NONE","travel":"slide"
+        },                                                                                                 
+
+        { "idx":12,
+        "tech_kor":"Ssang Sonnal Momtong Makki (beom)",
+        "tech_es":"Doble bloqueo de cuchillo (giro 180° der.)",
+        "stance_code":"beom_seogi","level":"MOMTONG","lead":"R","turn":"RIGHT_180","travel":"pivot"
+        },                                                                                                 
+
+        { "idx":13, "sub":"a",
+        "tech_kor":"Ap Chagi (R) → Ap Kubi",
+        "tech_es":"Frontal derecha y caída a ap kubi",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"R","turn":"NONE","travel":"step"
+        },                                                                                                 
+        { "idx":13, "sub":"b",
+        "tech_kor":"Momtong Bandae Jireugi (L) + Retiro a Beom",
+        "tech_es":"Puño medio izquierdo; recoge a beom con palma der.",
+        "stance_code":"beom_seogi","level":"MOMTONG","lead":"R","turn":"NONE","travel":"slide"
+        },                                                                                                 
+
+        { "idx":14,
+        "tech_kor":"Kodureo Arae Makki",
+        "tech_es":"Bloqueo bajo apoyado (giro 90° der.)",
+        "stance_code":"dwit_kubi","level":"ARAE","lead":"R","turn":"RIGHT_90","travel":"pivot"
+        },                                                                                                 
+        { "idx":15, "sub":"a",
+        "tech_kor":"Ap Chagi (L) (mantener)",
+        "tech_es":"Frontal izquierda sostenida",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"NONE"
+        },                                                                                               
+        { "idx":15, "sub":"b",
+        "tech_kor":"Ttwieo Ap Chagi (R) (kihap) → Ap Kubi",
+        "tech_es":"Salto con frontal derecha (kihap) y caída a ap kubi",
+        "stance_code":"ap_kubi","level":"MOMTONG/OLGUL","lead":"R","turn":"NONE","travel":"jump"
+        },                                                                                                
+        { "idx":15, "sub":"c",
+        "tech_kor":"Momtong An Makki → Momtong Jireugi (L)",
+        "tech_es":"Bloqueo interno medio y puño medio izquierdo",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"R","turn":"NONE","travel":"step"
+        },                                              
+
+        { "idx":16,
+        "tech_kor":"Hansonnal Momtong Makki (L)",
+        "tech_es":"Bloqueo de cuchillo simple izquierdo (giro 270° izq.)",
+        "stance_code":"dwit_kubi","level":"MOMTONG","lead":"L","turn":"LEFT_270","travel":"pivot"
+        },                                                                                              
+
+        { "idx":17,
+        "tech_kor":"Palkup Yeop Chigi (R) → Batangson Momtong Bakkat Makki (L) soporte",
+        "tech_es":"Codo horizontal derecho a palma izq. (ap kubi)",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"slide",
+        "notes":"Golpe de codo a diana (pyojeok) con control de palma."
+        },                                                                                                 
+
+        { "idx":18, "sub":"a",
+        "tech_kor":"Deungjumeok Ap Chigi (R)",
+        "tech_es":"Revés de puño (frontal) derecho",
+        "stance_code":"ap_kubi","level":"OLGUL","lead":"L","turn":"NONE","travel":"NONE"
+        },                                                                                                 
+        { "idx":18, "sub":"b",
+        "tech_kor":"Momtong Bandae Jireugi (L)",
+        "tech_es":"Puño medio izquierdo",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"NONE"
+        },                                                                                                 
+
+        { "idx":19,
+        "tech_kor":"Hansonnal Momtong Makki (R) (giro 180° der.)",
+        "tech_es":"Bloqueo de cuchillo simple derecho (dwit kubi)",
+        "stance_code":"dwit_kubi","level":"MOMTONG","lead":"R","turn":"RIGHT_180","travel":"pivot"
+        },                                                                                                 
+
+        { "idx":20,
+        "tech_kor":"Palkup Yeop Chigi (L) → Batangson Momtong Bakkat Makki (R) soporte",
+        "tech_es":"Codo horizontal izquierdo a palma der. (ap kubi)",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"R","turn":"NONE","travel":"slide"
+        },                                                                                                 
+
+        { "idx":21, "sub":"a",
+        "tech_kor":"Deungjumeok Ap Chigi (L)",
+        "tech_es":"Revés de puño (frontal) izquierdo",
+        "stance_code":"ap_kubi","level":"OLGUL","lead":"R","turn":"NONE","travel":"NONE"
+        },                                                                                                 
+        { "idx":21, "sub":"b",
+        "tech_kor":"Momtong Baro Jireugi (R)",
+        "tech_es":"Puño medio derecho",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"R","turn":"NONE","travel":"NONE"
+        },                                                                                                 
+        { "idx":22,
+        "tech_kor":"Hansonnal Momtong Makki (L) (giro 180° izq.)",
+        "tech_es":"Bloqueo de cuchillo simple izquierdo (dwit kubi)",
+        "stance_code":"dwit_kubi","level":"MOMTONG","lead":"L","turn":"LEFT_180","travel":"pivot"
+        },                                                                                           
+
+        { "idx":23,
+        "tech_kor":"Palkup Yeop Chigi (R) → control palma izq.",
+        "tech_es":"Codo horizontal derecho (ap kubi), control con palma izq.",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"slide"
+        },                                                               
+
+        { "idx":24, "sub":"a",
+        "tech_kor":"Deungjumeok Ap Chigi (R)",
+        "tech_es":"Revés (frontal) derecho",
+        "stance_code":"ap_kubi","level":"OLGUL","lead":"L","turn":"NONE","travel":"NONE"
+        },                                                                  
+        { "idx":24, "sub":"b",
+        "tech_kor":"Momtong Bandae Jireugi (L) — Baro",
+        "tech_es":"Puño medio izquierdo; cierre Baro",
+        "stance_code":"ap_kubi","level":"MOMTONG","lead":"L","turn":"NONE","travel":"NONE"
+        }                                                                    
+    ]
+}

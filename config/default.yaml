@@ -1,0 +1,28 @@
+general:
+  fps: 30
+  model_path: "./data/models/rf_t7jang.joblib"
+
+segmentation:
+  # umbrales de segmentación por actividad (ajustables por dataset)
+  speed_thresh_deg_s: 45.0
+  min_segment_frames: 10
+  max_pause_frames: 8
+
+features:
+  smoothing_window: 5       # Savitzky–Golay o media móvil
+  angle_triplets:           # índices de landmarks (ej. formato mediapipe)
+    elbow_left:   [11,13,15]    # hombro- codo- muñeca
+    elbow_right:  [12,14,16]
+    knee_left:    [23,25,27]
+    knee_right:   [24,26,28]
+    hip_left:     [11,23,25]
+    hip_right:    [12,24,26]
+    shoulder:     [11,12,24]    # alineación tronco aprox.
+  stat_funcs: ["mean","std","p10","p50","p90","range","max_speed","max_acc"]
+
+rules:
+  # regla base por umbrales físicos para leve/grave (complementada por ML)
+  knee_depth_min_deg: 50      # flexión mínima para “posturas profundas”
+  elbow_straight_max_deg: 15  # tolerancia para brazo extendido
+  trunk_tilt_max_deg: 20      # inclinación lateral permitida
+  jitter_max_deg_s2: 800      # suavidad

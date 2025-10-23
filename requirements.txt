@@ -1,0 +1,31 @@
+# ==== Núcleo científico ====
+numpy>=1.26
+opencv-python>=4.10
+pandas>=2.2
+scipy==1.11.4
+
+# ==== ML clásico (modelo: RandomForest/Reglas) ====
+scikit-learn>=1.5
+joblib>=1.4
+
+# ==== Utilidades de E/S y config ====
+pyyaml>=6.0
+python-dotenv>=1.0
+tqdm>=4.66
+pillow==10.3.0
+openpyxl==3.1.2   # exportar reportes .xlsx
+
+# ==== Descarga y HTTP ====
+yt-dlp==2024.4.9
+requests==2.31.0
+
+# ==== Visualización opcional (para depurar) ====
+matplotlib==3.8.4
+
+# ==== Backend de pose OPCIONAL (solo si usas Python < 3.12) ====
+mediapipe==0.10.14
+
+# ==== YOLO y utilidades adicionales ====
+ultralytics>=8.3
+pyarrow>=17.0
+decord>=0.6.0 ; platform_system != "Windows"  # opcional; en Windows suele fallar, OpenCV cubre
