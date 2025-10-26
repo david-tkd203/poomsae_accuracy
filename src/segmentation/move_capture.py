@@ -134,47 +134,64 @@ def _energy_series(eff_xy: Dict[str,np.ndarray], fps: float, smooth_win: int) ->
 def detect_segments_from_speed(speeds: np.ndarray, fps: float,
                                vstart: float, vstop: float,
                                min_dur: float, min_gap: float) -> List[Tuple[int,int]]:
+    """
+    Segmentación por histéresis: entra con s>=vstart, sale con s<=vstop.
+    Fusiona huecos cortos y descarta segmentos breves.
+    """
     smax = np.nanmax(speeds, axis=1)
-    active = smax >= vstart
+    n = len(smax)
+    on = False
     segs: List[Tuple[int,int]] = []
-    s = None
-    for i, on in enumerate(active):
-        if on and s is None:
-            s = i
-        elif not on and s is not None:
-            segs.append((s, i-1)); s = None
-    if s is not None:
-        segs.append((s, len(active)-1))
+    a = -1
+    for i in range(n):
+        if not on:
+            if smax[i] >= vstart:
+                on = True; a = i
+        else:
+            if smax[i] <= vstop:
+                b = i
+                while b > a and smax[b] <= vstop: b -= 1
+                segs.append((a, max(a, b)))
+                on = False; a = -1
+    if on and a >= 0:
+        segs.append((a, n-1))
 
     frames_min = int(round(min_dur * fps))
     frames_gap = int(round(min_gap * fps))
-    out: List[Tuple[int,int]] = []
-    last = None
-    for a,b in segs:
-        if (b - a + 1) < frames_min: continue
-        if last and (a - last[1] - 1) <= frames_gap:
-            last = (last[0], b)
+
+    segs = [(x,y) for (x,y) in segs if (y - x + 1) >= frames_min]
+    if not segs: return []
+    merged: List[Tuple[int,int]] = [segs[0]]
+    for (x,y) in segs[1:]:
+        (px,py) = merged[-1]
+        if (x - py - 1) <= frames_gap:
+            merged[-1] = (px, y)
         else:
-            if last: out.append(last)
-            last = (a,b)
-    if last: out.append(last)
-    return out
+            merged.append((x,y))
+    return merged
+
+def _refine_edges(smax: np.ndarray, a: int, b: int, vstop: float) -> Tuple[int,int]:
+    i = a
+    while i > 0 and smax[i] > vstop: i -= 1
+    a2 = i
+    j = b
+    while j < len(smax)-1 and smax[j] > vstop: j += 1
+    b2 = j
+    if a2 >= b2: return a, b
+    return a2, b2
 
 def _quantile_cut_segments(sp: np.ndarray, expected_n: int, min_frames: int) -> List[Tuple[int,int]]:
     T = len(sp)
     if expected_n <= 0 or T <= 1:
         return [(0, max(0, T-1))]
     e = np.maximum(sp, 0.0).astype(np.float64)
-    E = np.cumsum(e + 1e-6)  # evita masa cero
+    E = np.cumsum(e + 1e-6)
     targets = np.linspace(0.0, float(E[-1]), expected_n+1)
     cuts = np.searchsorted(E, targets, side="left")
     cuts[0] = 0; cuts[-1] = T-1
-    # de-duplicar y garantizar longitud mínima
-    # avance de 1 frame cuando haya empates
     for k in range(1, len(cuts)):
         if cuts[k] <= cuts[k-1]:
             cuts[k] = min(T-1, cuts[k-1] + 1)
-    # construir pares
     segs: List[Tuple[int,int]] = []
     for k in range(expected_n):
         a = int(cuts[k]); b = int(cuts[k+1])
@@ -183,7 +200,6 @@ def _quantile_cut_segments(sp: np.ndarray, expected_n: int, min_frames: int) -> 
         if k < expected_n-1 and b >= cuts[k+1]:
             b = max(a, cuts[k+1]-1)
         segs.append((a, b))
-    # ajustar solapes residuales
     for k in range(1, len(segs)):
         prev_a, prev_b = segs[k-1]
         a, b = segs[k]
@@ -191,9 +207,7 @@ def _quantile_cut_segments(sp: np.ndarray, expected_n: int, min_frames: int) -> 
             a = prev_b + 1
             if a > b: a = b
             segs[k] = (a, b)
-    # clamp a límites
     segs = [(max(0,a), min(T-1,b)) for a,b in segs if a <= b]
-    # si por ajustes se perdió alguno, rellenar uniformemente
     while len(segs) < expected_n:
         segs.append((segs[-1][1], min(T-1, segs[-1][1])))
     return segs[:expected_n]
@@ -270,6 +284,10 @@ class MoveSegment:
     stance_pred: str
     kick_pred: str
     arm_dir: str
+    # NUEVO: indices de frame absolutos en la cronología del video/CSV
+    a: int
+    b: int
+    pose_f: int  # frame “posición” (quietud) dentro del segmento
 
 @dataclass
 class CaptureResult:
@@ -322,23 +340,33 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
 
     speeds, sp = _energy_series(eff_xy, fps, smooth_win)
 
-    # umbrales adaptativos
+    # Umbrales adaptativos
     med = np.nanmedian(sp)
     mad = np.nanmedian(np.abs(sp - med)) + 1e-6
     vstart_adapt = max(vstart, med + 2.0*mad)
     vstop_adapt  = max(vstop,  med + 1.0*mad)
 
     segs = detect_segments_from_speed(speeds, fps, vstart_adapt, vstop_adapt, min_dur, min_gap)
+    smax = np.nanmax(speeds, axis=1)
+    segs = [_refine_edges(smax, a, b, vstop_adapt) for (a,b) in segs]
 
-    # forzar N esperado (p.ej., 24 en Pal Jang) usando cortes por cuantiles de energía
-    if isinstance(expected_n, int) and expected_n > 0:
+    # Forzar N esperado (p.ej., 24 en Pal Jang) usando cortes por cuantiles de energía
+    if isinstance(expected_n, int) and expected_n > 0 and len(segs) != expected_n:
         frames_min = int(round(min_dur * fps))
-        if len(segs) != expected_n:
-            segs = _quantile_cut_segments(sp, expected_n, frames_min)
+        segs = _quantile_cut_segments(sp, expected_n, frames_min)
+
+    # Helper: frame de “posición” por quietud del efector activo
+    def _pose_frame_quiet(eff_name: str, a: int, b: int) -> int:
+        if a >= b: return a
+        v = np.linalg.norm(central_diff(movavg(eff_xy[eff_name][a:b+1], smooth_win), fps), axis=1)
+        i0 = int(0.6 * len(v))
+        i0 = min(max(0, i0), len(v)-1)
+        seg = v[i0:] if len(v) else np.array([0.0], np.float32)
+        k = int(np.nanargmin(seg)) if np.isfinite(seg).any() else 0
+        return a + i0 + k
 
     moves: List[MoveSegment] = []
     for i,(a,b) in enumerate(segs, start=1):
-        # miembro activo por desplazamiento dentro del segmento
         limb = _choose_active_limb(eff_xy, a, b)
         seg_sp_col = {
             k: np.linalg.norm(central_diff(movavg(eff_xy[k][a:b+1], smooth_win), fps), axis=1) for k in END_EFFECTORS
@@ -346,7 +374,6 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
         v_peak = float(max(np.nanmax(v) if len(v) else 0.0 for v in seg_sp_col.values()))
 
         path_xy = eff_xy[limb][a:b+1, :]
-        # cuando se fuerza expected_n no descartamos por trayectoria corta
         if not (isinstance(expected_n, int) and expected_n > 0):
             if len(path_xy) >= 2:
                 path_len = float(np.sum(np.linalg.norm(np.diff(path_xy, axis=0), axis=1)))
@@ -386,12 +413,15 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
         if limb in ("L_WRIST","R_WRIST") and len(path_xy) >= 2:
             a_dir = arm_motion_direction(path_xy)
 
+        pose_f = _pose_frame_quiet(limb, a, b)
+
         moves.append(MoveSegment(
             idx=i, t_start=a/fps, t_end=b/fps, duration=max(1,(b-a+1))/fps,
             active_limb=limb, speed_peak=v_peak,
             rotation_deg=float(dhead), rotation_bucket=bucket,
             height_end=y_end, path=[(float(x), float(y)) for x,y in poly],
-            stance_pred=st, kick_pred=kick, arm_dir=a_dir
+            stance_pred=st, kick_pred=kick, arm_dir=a_dir,
+            a=int(a), b=int(b), pose_f=int(pose_f)
         ))
 
     return CaptureResult(video_id=Path(csv_path).stem, fps=fps, nframes=nframes, moves=moves)
@@ -449,8 +479,7 @@ def render_preview(video_path: Path, result: CaptureResult, out_path: Path,
 
     per_frame: Dict[int,List[MoveSegment]] = {}
     for m in result.moves:
-        a = int(round(m.t_start * fps))
-        b = int(round(m.t_end * fps))
+        a = int(m.a); b = int(m.b)
         for f in range(a, b+1):
             per_frame.setdefault(f, []).append(m)
 

@@ -5,9 +5,9 @@
         "rel_level": "(wrist_y - shoulder_mid_y) / (hip_mid_y - shoulder_mid_y)"
     },
     "tolerances": {
-        "turn_deg_tol": 30,
+        "turn_deg_tol": 30.0,
         "arm_octant_tol": 1,
-        "dtw_good": 0.12
+        "dtw_good": 0.25
     },
     "levels": {
         "olgul_max_rel": -0.02,
@@ -16,78 +16,37 @@
     },
     "stances": {
         "ap_kubi": {
-        "ankle_dist_min_sw": 1.00,
+        "ankle_dist_min_sw": 0.30,
+        "ankle_dist_leve_sw": 0.26,
         "front_knee_max_deg": 155.0,
-        "rear_knee_min_deg": 170.0
+        "rear_knee_min_deg": 165.0
+        },
+        "ap_seogi": {
+        "ankle_dist_max_sw": 0.26,
+        "rear_foot_turn_min_deg": 25.0
         },
         "dwit_kubi": {
-        "ankle_dist_min_sw": 0.70,
-        "ankle_dist_max_sw": 1.20,
+        "ankle_dist_min_sw": 0.18,
+        "ankle_dist_max_sw": 0.60,
         "hip_minus_feet_center_min": 0.020,
         "front_knee_min_deg": 165.0,
         "rear_knee_max_deg": 155.0
         },
         "beom_seogi": {
-        "ankle_dist_max_sw": 0.75,
+        "ankle_dist_max_sw": 0.18,
         "hip_minus_feet_center_min": 0.015
-        }
-    },
-    "arms": {
-        "momtong_makki": {
-        "level_target": "MOMTONG",
-        "elbow_block_min_deg": 90.0,
-        "elbow_block_max_deg": 120.0
-        },
-        "olgul_makki": {
-        "level_target": "OLGUL",
-        "elbow_block_min_deg": 90.0,
-        "elbow_block_max_deg": 120.0
-        },
-        "arae_makki": {
-        "level_target": "ARAE",
-        "elbow_straight_min_deg": 165.0,
-        "thigh_gap_min_sw": 0.15
-        },
-        "momtong_bakkat_makki": {
-        "level_target": "MOMTONG",
-        "elbow_block_min_deg": 90.0,
-        "elbow_block_max_deg": 120.0,
-        "cross_min_sw": 0.20,
-        "direction": "outward"
-        },
-        "momtong_an_makki": {
-        "level_target": "MOMTONG",
-        "elbow_block_min_deg": 90.0,
-        "elbow_block_max_deg": 120.0,
-        "cross_min_sw": 0.20,
-        "direction": "inward"
-        },
-        "hansonnal_makki": {
-        "equiv_to": "momtong_makki",
-        "elbow_block_min_deg": 90.0,
-        "elbow_block_max_deg": 120.0
-        },
-        "batangson_eolgul_makki": {
-        "level_target": "OLGUL",
-        "wrist_to_forehead_fist_equiv": 0.08
-        },
-        "jireugi": {
-        "elbow_min_deg": 160.0,
-        "wrist_straight_max_dev_deg": 15.0
-        },
-        "palkup_yeop_chigi": {
-        "elbow_max_deg": 100.0,
-        "forward_x_min_sw": 0.10
         }
     },
     "kicks": {
         "ap_chagi": {
+        "amp_min": 0.20,
         "peak_above_hip_min": 0.25,
-        "amp_min": 0.20
+        "plantar_min_deg": 150.0,
+        "gaze_max_deg": 35.0
         },
         "ttwieo_ap_chagi": {
-        "peak_above_hip_min": 0.30,
         "amp_min": 0.30,
+        "peak_above_hip_min": 0.30,
         "airborne_min_frac": 0.10
         },
         "double_peak_max_gap_frames": 10

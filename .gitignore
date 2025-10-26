@@ -1,5 +1,6 @@
 # Ignorar la carpeta data
 data/
+previews/
 
 # Ignorar archivos y carpetas de pycache
 __pycache__/

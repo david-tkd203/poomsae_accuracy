@@ -7,11 +7,12 @@ from typing import List, Dict, Tuple, Optional
 import numpy as np
 import pandas as pd
 
+# permitir "python -m src.tools.score_pal_yang"
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.segmentation.move_capture import load_landmarks_csv
+from src.segmentation.move_capture import load_landmarks_csv  # lector CSV
 
 # ----------------- carga spec poomsae / pose -----------------
 
@@ -34,13 +35,14 @@ def load_pose_spec(path: Optional[Path]) -> Dict:
         "tolerances": {"turn_deg_tol": 30.0, "arm_octant_tol": 1, "dtw_good": 0.25},
         "levels": {"olgul_max_rel": -0.02, "arae_min_rel": 1.03, "momtong_band":[0.05,0.95]},
         "stances": {
-            "ap_kubi":    {"ankle_dist_min_sw": 0.90, "front_knee_max_deg": 155.0, "rear_knee_min_deg": 165.0},
-            "dwit_kubi":  {"ankle_dist_min_sw": 0.55, "ankle_dist_max_sw": 1.20, "hip_minus_feet_center_min": 0.02,
+            "ap_kubi":    {"ankle_dist_min_sw": 0.30, "ankle_dist_leve_sw": 0.26, "front_knee_max_deg": 155.0, "rear_knee_min_deg": 165.0},
+            "ap_seogi":   {"ankle_dist_max_sw": 0.26, "rear_foot_turn_min_deg": 25.0},
+            "dwit_kubi":  {"ankle_dist_min_sw": 0.18, "ankle_dist_max_sw": 0.60, "hip_minus_feet_center_min": 0.02,
                            "front_knee_min_deg": 165.0, "rear_knee_max_deg": 155.0},
-            "beom_seogi": {"ankle_dist_max_sw": 0.60, "hip_minus_feet_center_min": 0.015}
+            "beom_seogi": {"ankle_dist_max_sw": 0.18, "hip_minus_feet_center_min": 0.015}
         },
         "kicks": {
-            "ap_chagi": {"amp_min": 0.20, "peak_above_hip_min": 0.25},
+            "ap_chagi": {"amp_min": 0.20, "peak_above_hip_min": 0.25, "plantar_min_deg": 150.0, "gaze_max_deg": 35.0},
             "ttwieo_ap_chagi": {"amp_min": 0.30, "peak_above_hip_min": 0.30, "airborne_min_frac": 0.10}
         }
     }
@@ -110,7 +112,7 @@ def _deg_diff(a: float, b: float) -> float:
     d = (a - b + 180.0) % 360.0 - 180.0
     return abs(d)
 
-# ----------------- series / util landmarks -----------------
+# ----------------- series nivel muñeca hombro↔cadera -----------------
 
 def _series_xy_range(df: pd.DataFrame, lmk_id: int, a: int, b: int) -> np.ndarray:
     L = max(1, b - a + 1)
@@ -153,78 +155,143 @@ def _level_from_spec_thresholds(rel_end: float, levels_cfg: Dict[str,object]) ->
         return "ARAE"
     return "MOMTONG"
 
-# --------- util para segmentos sintéticos ---------
+# ----------------- util pose pies/cabeza -----------------
 
-def _heading_series_deg(df: pd.DataFrame) -> np.ndarray:
-    maxf = int(df["frame"].max())
-    lsh = _series_xy_range(df, 11, 0, maxf)
-    rsh = _series_xy_range(df, 12, 0, maxf)
-    v = rsh - lsh
-    ang = np.degrees(np.arctan2(v[:,1], v[:,0]))
-    out = ang.copy()
-    for i in range(1, len(out)):
-        d = out[i] - out[i-1]
-        if d > 180:  out[i:] -= 360
-        elif d < -180: out[i:] += 360
-    return out
+def _xy_mean(df: pd.DataFrame, lmk_id: int, a: int, b: int) -> Tuple[float,float]:
+    sub = df[(df["lmk_id"]==lmk_id) & (df["frame"]>=a) & (df["frame"]<=b)][["x","y"]]
+    if sub.empty: return (np.nan, np.nan)
+    m = sub.mean().to_numpy(np.float32)
+    return float(m[0]), float(m[1])
 
-def _estimate_rotation_deg(df: pd.DataFrame, a: int, b: int) -> float:
-    hd = _heading_series_deg(df)
-    a = int(np.clip(a, 0, len(hd)-1)); b = int(np.clip(b, 0, len(hd)-1))
-    h0 = float(hd[a]); h1 = float(hd[b])
-    d = ((h1 - h0 + 180.0) % 360.0) - 180.0
-    return float(d)
+def _angle3(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
+    ba = a - b; bc = c - b
+    num = float(np.dot(ba, bc)); den = float(np.linalg.norm(ba)*np.linalg.norm(bc) + 1e-9)
+    ang = math.degrees(math.acos(np.clip(num/den, -1, 1)))
+    return float(ang)
 
-def _disp(xy: np.ndarray) -> float:
-    if len(xy) < 2: return 0.0
-    d = np.sqrt(np.sum(np.diff(xy, axis=0)**2, axis=1))
-    return float(np.nansum(d))
+def _stance_plus(df: pd.DataFrame, a: int, b: int) -> Tuple[str, Dict[str,float]]:
+    sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
+    def mean_xy(idx): 
+        s = sub[sub["lmk_id"]==idx][["x","y"]].to_numpy(np.float32)
+        return s.mean(axis=0) if len(s) else np.array([np.nan,np.nan],np.float32)
+    LANK = mean_xy(27); RANK = mean_xy(28)
+    LKNE = mean_xy(25); RKNE = mean_xy(26)
+    LHIP = mean_xy(23); RHIP = mean_xy(24)
+    LSH = mean_xy(11);  RSH = mean_xy(12)
+    if any(np.isnan(v) for v in [*LANK,*RANK,*LSH,*RSH,*LHIP,*RHIP]):
+        return "unknown", {}
+    sh_w = float(np.linalg.norm(RSH-LSH) + 1e-6)
+    ankle_dist = float(np.linalg.norm(RANK-LANK))
+    ankle_dist_sw = ankle_dist / sh_w
 
-def _choose_active_limb(df: pd.DataFrame, a: int, b: int) -> str:
-    cand = {
-        "L_WRIST": _series_xy_range(df, 15, a, b),
-        "R_WRIST": _series_xy_range(df, 16, a, b),
-        "L_ANK":   _series_xy_range(df, 27, a, b),
-        "R_ANK":   _series_xy_range(df, 28, a, b),
-    }
-    return max(cand.items(), key=lambda kv: _disp(kv[1]))[0]
+    feet_c = 0.5*(LANK + RANK); hip_c = 0.5*(LHIP + RHIP)
+    hip_behind = 1.0 if (hip_c[1] > feet_c[1]) else 0.0
 
-def _poly_from_limb(df: pd.DataFrame, limb: str, a: int, b: int, n: int = 20) -> List[Tuple[float,float]]:
-    lid = {"L_WRIST":15,"R_WRIST":16,"L_ANK":27,"R_ANK":28}[limb]
-    xy = _series_xy_range(df, lid, a, b)
-    if len(xy) == 0:
-        return []
-    d = np.sqrt(np.sum(np.diff(xy, axis=0)**2, axis=1)) if len(xy) >= 2 else np.array([0.0])
-    s = np.concatenate([[0.0], np.cumsum(d)])
-    if s[-1] <= 1e-9:
-        xs = np.full((n,), xy[0,0], np.float32); ys = np.full((n,), xy[0,1], np.float32)
+    LHEEL = mean_xy(29); RHEEL = mean_xy(30)
+    LFOOT = mean_xy(31); RFOOT = mean_xy(32)
+    vL = LFOOT - LHEEL; vR = RFOOT - RHEEL
+    def ang_deg(v): 
+        if np.linalg.norm(v) < 1e-6: return np.nan
+        return float(np.degrees(np.arctan2(v[1], v[0])))
+    angL = ang_deg(vL); angR = ang_deg(vR)
+
+    kL = _angle3(LHIP, LKNE, LANK) if not any(np.isnan(v) for v in [*LHIP,*LKNE,*LANK]) else np.nan
+    kR = _angle3(RHIP, RKNE, RANK) if not any(np.isnan(v) for v in [*RHIP,*RKNE,*RANK]) else np.nan
+    knee_min = float(np.nanmin([kL,kR])); knee_max = float(np.nanmax([kL,kR]))
+
+    if ankle_dist_sw >= 0.30:
+        lab = "ap_kubi"
+    elif ankle_dist_sw <= 0.18 and hip_behind >= 0.5:
+        lab = "beom_seogi"
+    elif ankle_dist_sw < 0.26:
+        lab = "ap_seogi"
     else:
-        t = np.linspace(0.0, float(s[-1]), n)
-        xs = np.interp(t, s, xy[:,0]); ys = np.interp(t, s, xy[:,1])
-    return [(float(xs[i]), float(ys[i])) for i in range(n)]
+        lab = "dwit_kubi"
+
+    return lab, dict(ankle_dist_sw=ankle_dist_sw, hip_behind=hip_behind, knee_min=knee_min, knee_max=knee_max,
+                     foot_ang_L=angL, foot_ang_R=angR)
+
+def _rear_foot_turn_deg(features: Dict[str,float], front_side: str) -> float:
+    angL = features.get("foot_ang_L"); angR = features.get("foot_ang_R")
+    if front_side == "L":
+        return abs(float(angR)) if angR is not None and not math.isnan(angR) else np.nan
+    else:
+        return abs(float(angL)) if angL is not None and not math.isnan(angL) else np.nan
+
+def _ankle_dist_sw(df: pd.DataFrame, a: int, b: int) -> float:
+    sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
+    LANK = sub[sub["lmk_id"]==27][["x","y"]].to_numpy(np.float32)
+    RANK = sub[sub["lmk_id"]==28][["x","y"]].to_numpy(np.float32)
+    LSH  = sub[sub["lmk_id"]==11][["x","y"]].to_numpy(np.float32)
+    RSH  = sub[sub["lmk_id"]==12][["x","y"]].to_numpy(np.float32)
+    if len(LANK)==0 or len(RANK)==0 or len(LSH)==0 or len(RSH)==0:
+        return float("nan")
+    ankle = float(np.linalg.norm(RANK.mean(0)-LANK.mean(0)))
+    sh_w  = float(np.linalg.norm(RSH.mean(0)-LSH.mean(0)) + 1e-6)
+    return ankle / sh_w
+
+def _kicking_side(df: pd.DataFrame, a: int, b: int) -> Optional[str]:
+    sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
+    if sub.empty:
+        return None
+
+    ankL = sub[sub["lmk_id"]==27][["frame","y"]].groupby("frame")["y"].min().squeeze()
+    ankR = sub[sub["lmk_id"]==28][["frame","y"]].groupby("frame")["y"].min().squeeze()
+    hip  = sub[sub["lmk_id"].isin([23,24])][["frame","y"]].groupby("frame")["y"].mean().squeeze()
+
+    hip_s = pd.Series(hip,  name="hip")
+    ankL_s= pd.Series(ankL, name="ankL")
+    ankR_s= pd.Series(ankR, name="ankR")
+
+    jL = pd.concat([hip_s, ankL_s], axis=1, join="inner").dropna()
+    jR = pd.concat([hip_s, ankR_s], axis=1, join="inner").dropna()
+
+    relL = (jL["hip"] - jL["ankL"]).to_numpy(np.float32) if not jL.empty else np.array([], np.float32)
+    relR = (jR["hip"] - jR["ankR"]).to_numpy(np.float32) if not jR.empty else np.array([], np.float32)
+
+    if relL.size==0 and relR.size==0:
+        return None
+
+    ampL = float(np.nanpercentile(relL,95) - np.nanpercentile(relL,5)) if relL.size else 0.0
+    ampR = float(np.nanpercentile(relR,95) - np.nanpercentile(relR,5)) if relR.size else 0.0
+    return "L" if ampL >= ampR else "R"
+
+def _plantar_angle_deg(df: pd.DataFrame, a: int, b: int, side: str) -> float:
+    ids = dict(L=dict(knee=25, ank=27, heel=29, foot=31), R=dict(knee=26, ank=28, heel=30, foot=32))[side]
+    def mean_xy(idx):
+        sub = df[(df["lmk_id"]==idx) & (df["frame"]>=a) & (df["frame"]<=b)][["x","y"]].to_numpy(np.float32)
+        return sub.mean(0) if len(sub) else np.array([np.nan,np.nan],np.float32)
+    K = mean_xy(ids["knee"]); A = mean_xy(ids["ank"]); H = mean_xy(ids["heel"]); F = mean_xy(ids["foot"])
+    if any(np.isnan(v) for v in [*K,*A,*H,*F]): return float("nan")
+    shank = K - A
+    foot  = F - H
+    num = float(np.dot(shank, foot))
+    den = float(np.linalg.norm(shank)*np.linalg.norm(foot) + 1e-9)
+    return float(np.degrees(np.arccos(np.clip(num/den, -1, 1))))
+
+def _gaze_to_toe_deg(df: pd.DataFrame, a: int, b: int, side: str) -> float:
+    def mean_xy(idx):
+        sub = df[(df["lmk_id"]==idx) & (df["frame"]>=a) & (df["frame"]<=b)][["x","y"]].to_numpy(np.float32)
+        return sub.mean(0) if len(sub) else np.array([np.nan,np.nan],np.float32)
+    NOSE = mean_xy(0)
+    LEAR = mean_xy(7); REAR = mean_xy(8)
+    TOE = mean_xy(31 if side=="L" else 32)
+    if any(np.isnan(v) for v in [*NOSE,*LEAR,*REAR,*TOE]): return float("nan")
+    head_lr = REAR - LEAR
+    if np.linalg.norm(head_lr) < 1e-6: return float("nan")
+    head_norm = np.array([ -head_lr[1], head_lr[0] ], np.float32)
+    head_norm = head_norm / (np.linalg.norm(head_norm) + 1e-9)
+    to_toe = (TOE - NOSE); n = np.linalg.norm(to_toe)
+    if n < 1e-6: return float("nan")
+    to_toe = to_toe / n
+    ang = float(np.degrees(np.arccos(np.clip(float(np.dot(head_norm, to_toe)), -1.0, 1.0))))
+    return ang
 
 # ----------------- postura / patada / codo -----------------
 
-def _angle(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
-    ba = a - b; bc = c - b
-    num = float(np.dot(ba, bc)); den = float(np.linalg.norm(ba)*np.linalg.norm(bc) + 1e-9)
-    return float(math.degrees(math.acos(np.clip(num/den, -1, 1))))
-
-def _stance(df: pd.DataFrame, a: int, b: int) -> str:
-    sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
-    ankL = sub[sub["lmk_id"]==27][["x","y"]].to_numpy()
-    ankR = sub[sub["lmk_id"]==28][["x","y"]].to_numpy()
-    shL  = sub[sub["lmk_id"]==11][["x","y"]].to_numpy()
-    shR  = sub[sub["lmk_id"]==12][["x","y"]].to_numpy()
-    if len(ankL)==0 or len(ankR)==0 or len(shL)==0 or len(shR)==0: return "unknown"
-    aL = ankL.mean(axis=0); aR = ankR.mean(axis=0)
-    sL = shL.mean(axis=0);  sR = shR.mean(axis=0)
-    shoulder_w = float(np.linalg.norm(sR - sL) + 1e-6)
-    base = float(np.linalg.norm(aR - aL))
-    ratio = base / shoulder_w
-    if ratio >= 0.30: return "ap_kubi"
-    if ratio <= 0.18: return "beom_seogi"
-    return "dwit_kubi"
+def _stance_simple(df: pd.DataFrame, a: int, b: int) -> str:
+    lab, _ = _stance_plus(df, a, b)
+    return lab
 
 def _kick_required(tech_kor: str, tech_es: str) -> bool:
     s = f"{tech_kor} {tech_es}".lower()
@@ -232,29 +299,46 @@ def _kick_required(tech_kor: str, tech_es: str) -> bool:
 
 def _kick_metrics(df: pd.DataFrame, a: int, b: int) -> Tuple[float,float]:
     sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
+    if sub.empty:
+        return 0.0, 0.0
+
     ank = sub[sub["lmk_id"].isin([27,28])][["frame","y"]]
     hips= sub[sub["lmk_id"].isin([23,24])][["frame","y"]]
-    if ank.empty or hips.empty: return 0.0, 0.0
-    hip = hips.groupby("frame")["y"].mean()
-    ank_min = ank.groupby("frame")["y"].min()
-    join = hip.to_frame("hip").join(ank_min.to_frame("ank"), how="inner")
+    if ank.empty or hips.empty:
+        return 0.0, 0.0
+
+    hip_series = hips.groupby("frame")["y"].mean().squeeze()
+    ank_series = ank.groupby("frame")["y"].min().squeeze()
+
+    hip_s = pd.Series(hip_series, name="hip")
+    ank_s = pd.Series(ank_series, name="ank")
+
+    join = pd.concat([hip_s, ank_s], axis=1, join="inner").dropna()
+    if join.empty:
+        return 0.0, 0.0
+
     rel = (join["hip"].to_numpy(np.float32) - join["ank"].to_numpy(np.float32))
-    amp = float(np.nanpercentile(rel,95) - np.nanpercentile(rel,5))
-    peak = float(np.nanmax(rel)) if rel.size else 0.0
+    if rel.size == 0 or not np.isfinite(rel).any():
+        return 0.0, 0.0
+
+    amp  = float(np.nanpercentile(rel, 95) - np.nanpercentile(rel, 5))
+    peak = float(np.nanmax(rel))
     return max(0.0, amp), max(0.0, peak)
 
 def _elbow_angle(a, b, c) -> float:
     ba = a - b; bc = c - b
     num = float(np.dot(ba, bc)); den = float(np.linalg.norm(ba)*np.linalg.norm(bc) + 1e-9)
-    return float(math.degrees(math.acos(np.clip(num/den, -1, 1))))
+    ang = math.degrees(math.acos(np.clip(num/den, -1, 1)))
+    return float(ang)
 
 def _median_elbow_extension(df: pd.DataFrame, a: int, b: int) -> float:
     sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
     need = {11,12,13,14,15,16}
     if not set(sub["lmk_id"].unique()).intersection(need):
         return 150.0
-    def get_xy(k):
-        return sub[sub["lmk_id"]==k][["frame","x","y"]]
+    def get_xy(k): 
+        s = sub[sub["lmk_id"]==k][["frame","x","y"]]
+        return s
     LSH,RSH = get_xy(11), get_xy(12)
     LELB,RELB= get_xy(13), get_xy(14)
     LWR,RWR  = get_xy(15), get_xy(16)
@@ -265,12 +349,45 @@ def _median_elbow_extension(df: pd.DataFrame, a: int, b: int) -> float:
         sh = m[["x_sh","y_sh"]].to_numpy(np.float32)
         el = m[["x_elb","y_elb"]].to_numpy(np.float32)
         wr = m[["x","y"]].to_numpy(np.float32)
-        return np.array([_elbow_angle(sh[i], el[i], wr[i]) for i in range(len(m))], np.float32)
+        ang = np.array([_elbow_angle(sh[i], el[i], wr[i]) for i in range(len(m))], np.float32)
+        return ang
     arrL = seq_elbow(mL); arrR = seq_elbow(mR)
     allv = np.concatenate([arrL, arrR]) if (arrL.size or arrR.size) else np.array([150.0],np.float32)
     return float(np.nanmedian(allv))
 
-# ----------------- clasificación por sub-criterio -----------------
+# ----------------- selección de frame “posición” -----------------
+
+def _target_for_level(level_exp: str, levels_cfg: Dict[str,object]) -> float:
+    level_exp = str(level_exp or "MOMTONG").upper()
+    if level_exp == "OLGUL":   return float(levels_cfg.get("olgul_max_rel", -0.02))
+    if level_exp == "ARAE":    return float(levels_cfg.get("arae_min_rel", 1.03))
+    a,b = levels_cfg.get("momtong_band",[0.05,0.95])
+    return 0.5*(float(a)+float(b))
+
+def _pose_frame_for_segment(csv_df: pd.DataFrame, a: int, b: int, level_exp: str, levels_cfg: Dict[str,object]) -> int:
+    if b <= a: return a
+    f0 = a + int(0.6*(b-a))
+    T  = _target_for_level(level_exp, levels_cfg)
+    best_f, best_cost = b, float("inf")
+    for f in range(f0, b+1):
+        # usa la mano más estable respecto a objetivo de nivel
+        yL = _series_xy_range(csv_df, 15, f, f)[:,1][0]
+        yR = _series_xy_range(csv_df, 16, f, f)[:,1][0]
+        # hombros/cadera del mismo frame
+        y_sh = 0.5*(_series_xy_range(csv_df, 11, f, f)[:,1][0] + _series_xy_range(csv_df, 12, f, f)[:,1][0])
+        y_hp = 0.5*(_series_xy_range(csv_df, 23, f, f)[:,1][0] + _series_xy_range(csv_df, 24, f, f)[:,1][0])
+        den = (y_hp - y_sh)
+        d = float("inf")
+        if den != 0 and np.isfinite(den):
+            relL = (yL - y_sh)/den if np.isfinite(yL) else np.nan
+            relR = (yR - y_sh)/den if np.isfinite(yR) else np.nan
+            d = min(abs(relL - T) if np.isfinite(relL) else float("inf"),
+                    abs(relR - T) if np.isfinite(relR) else float("inf"))
+        if d < best_cost:
+            best_cost, best_f = d, f
+    return int(best_f)
+
+# ----------------- clasificación por sub-criterio (reglas 2024) -----------------
 
 def _classify_rotation(rot_meas_deg: float, rot_exp_code: str, tol: float) -> str:
     exp_deg = _turn_code_deg(rot_exp_code)
@@ -319,21 +436,56 @@ def _classify_extension(median_elbow_deg: float, min_ok: float = 150.0, min_leve
     if median_elbow_deg >= min_leve: return "LEVE"
     return "GRAVE"
 
-def _classify_stance(meas: str, exp: str) -> str:
-    if exp == "": return "OK"
-    if meas == exp: return "OK"
+def _classify_stance_2024(meas_lab: str, exp_lab: str, ankle_dist_sw: float, rear_turn_deg: float, cfg: Dict) -> Tuple[str,str]:
+    if exp_lab == "":
+        return "OK","no-exp"
+    if exp_lab == "ap_kubi" and meas_lab == "ap_seogi":
+        return "GRAVE","ap_kubi_vs_ap_seogi"
+    if meas_lab == exp_lab:
+        if exp_lab == "ap_kubi":
+            amin = float(cfg["stances"]["ap_kubi"].get("ankle_dist_min_sw", 0.30))
+            aleve = float(cfg["stances"]["ap_kubi"].get("ankle_dist_leve_sw", 0.26))
+            if ankle_dist_sw < amin:
+                if ankle_dist_sw >= aleve:
+                    return "LEVE","ap_kubi_short_dist"
+                else:
+                    return "GRAVE","ap_kubi_very_short_dist"
+        if exp_lab == "ap_seogi":
+            thr = float(cfg["stances"]["ap_seogi"].get("rear_foot_turn_min_deg", 25.0))
+            if not (isinstance(rear_turn_deg,(int,float)) and not math.isnan(rear_turn_deg)):
+                return "LEVE","ap_seogi_turn_unknown"
+            if rear_turn_deg < thr:
+                return "LEVE","ap_seogi_turn<30"
+        return "OK","match"
     rear = {"dwit_kubi","beom_seogi"}
-    if meas in rear and exp in rear: return "LEVE"
-    if meas == "unknown": return "LEVE"
-    return "GRAVE"
+    if meas_lab in rear and exp_lab in rear:
+        return "LEVE","rear_family_swap"
+    if meas_lab == "unknown":
+        return "LEVE","unknown"
+    return "GRAVE","diff_posture"
 
-def _classify_kick(amp: float, peak: float, thr_amp: float, thr_peak: Optional[float]) -> str:
+def _classify_kick_2024(amp: float, peak: float, thr_amp: float, thr_peak: Optional[float],
+                        kick_type_pred: str, kick_type_exp: str,
+                        plantar_deg: float, plantar_thr: float,
+                        gaze_deg: float, gaze_thr: float) -> Tuple[str,str]:
+    pred = (kick_type_pred or "").lower()
+    exp  = (kick_type_exp or "").lower()
+    if ("chagi" in exp) and (pred not in ("ap_chagi","ttwieo_ap_chagi","ap_chagi_like","ap")):
+        return "GRAVE","wrong_kick_type"
+
     ok_amp  = amp  >= thr_amp
     ok_peak = (peak >= float(thr_peak)) if (thr_peak is not None) else True
-    if ok_amp and ok_peak: return "OK"
+
+    if ok_amp and ok_peak:
+        plantar_ok = (isinstance(plantar_deg,(int,float)) and plantar_deg >= plantar_thr)
+        gaze_ok    = (isinstance(gaze_deg,(int,float)) and gaze_deg <= gaze_thr)
+        if not plantar_ok or not gaze_ok:
+            return "LEVE","no_plantar" if not plantar_ok else "no_gaze_to_toe"
+        return "OK","ok"
+
     if (amp >= 0.5*thr_amp) or (thr_peak is not None and peak >= 0.5*float(thr_peak)):
-        return "LEVE"
-    return "GRAVE"
+        return "LEVE","amp_peak"
+    return "GRAVE","amp_peak"
 
 def _ded(cls: str, pen_leve: float, pen_grave: float) -> float:
     if cls == "GRAVE": return pen_grave
@@ -358,20 +510,40 @@ def score_one_video(
     landmarks_root: Path, alias: str, subset: Optional[str],
     pose_spec: Optional[Path],
     penalty_leve: float, penalty_grave: float,
-    clamp_min: float = 1.5
+    clamp_min: float = 1.5,
+    restart_penalty: float = 0.0
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     spec = load_spec(spec_json)
     cfg  = load_pose_spec(pose_spec)
 
     mv = json.loads(Path(moves_json).read_text(encoding="utf-8"))
     video_id = mv["video_id"]
-    fps = float(mv.get("fps", 30.0))
+    fps_json = float(mv.get("fps", 30.0))
+    nframes_json = int(mv.get("nframes", 0) or 0)
     segs = mv.get("moves", [])
 
     csv_path = (landmarks_root / alias / subset / f"{video_id}.csv") if subset else (landmarks_root / alias / f"{video_id}.csv")
     if not csv_path.exists():
         raise SystemExit(f"CSV no encontrado para {video_id}: {csv_path}")
     df = load_landmarks_csv(csv_path)
+    nframes_csv = int(df["frame"].max()) + 1
+
+    # Estima fps “real” del CSV a partir del mapeo JSON↔CSV (robusto a 30/60)
+    if nframes_json > 1 and nframes_csv > 1:
+        fps_csv_est = fps_json * ((nframes_csv - 1) / float(nframes_json - 1))
+    else:
+        fps_csv_est = fps_json
+
+    def _sec_to_csv_frame(t: float) -> int:
+        f_json = int(round(t * fps_json))
+        if nframes_json > 1 and nframes_csv > 1:
+            s = (nframes_csv - 1) / float(nframes_json - 1)
+            f_csv = int(round(f_json * s))
+        else:
+            f_csv = f_json
+        if f_csv < 0: f_csv = 0
+        if f_csv >= nframes_csv: f_csv = nframes_csv - 1
+        return f_csv
 
     expected = spec["_flat_moves"]
     rows = []
@@ -385,16 +557,10 @@ def score_one_video(
     kcfg      = cfg.get("kicks", {})
     ap_thr    = float(kcfg.get("ap_chagi",{}).get("amp_min", 0.20))
     peak_thr  = kcfg.get("ap_chagi",{}).get("peak_above_hip_min", None)
+    plantar_thr = float(kcfg.get("ap_chagi",{}).get("plantar_min_deg", 150.0))
+    gaze_thr    = float(kcfg.get("ap_chagi",{}).get("gaze_max_deg", 35.0))
     if peak_thr is not None:
         peak_thr = float(peak_thr)
-
-    nframes = int(df["frame"].max()) + 1
-    def _uniform_window(i: int, N: int) -> Tuple[int,int]:
-        a = int(round(i     * nframes / N))
-        b = int(round((i+1) * nframes / N)) - 1
-        a = max(0, min(a, nframes-1))
-        b = max(a, min(b, nframes-1))
-        return a, b
 
     for i in range(len(expected)):
         e = expected[i]
@@ -404,34 +570,66 @@ def score_one_video(
         level_exp = str(e.get("level","MOMTONG")).upper()
         stance_exp  = str(e.get("stance_code",""))
         dir_exp = e.get("dir_octant", None)
+        lead = str(e.get("lead","")).upper() or "L"
 
-        if s is not None:
-            t0 = float(s.get("t_start", 0.0)); t1 = float(s.get("t_end", t0))
-            a  = int(round(t0*fps));           b  = int(round(t1*fps))
-            a = max(0, min(a, nframes-1)); b = max(a, min(b, nframes-1))
-            rot_meas_deg = float(s.get("rotation_deg", 0.0))
-            limb = str(s.get("active_limb","")) or _choose_active_limb(df, a, b)
-            arm_poly = s.get("path", []) or _poly_from_limb(df, limb, a, b, n=20)
+        if s is None:
+            rows.append({
+                "video_id": video_id, "M": e["_key"], "tech_kor": tech_kor, "tech_es": tech_es,
+                "comp_arms": "NS", "comp_legs": "NS", "comp_kick": "NS",
+                "pen_arms": 0.0, "pen_legs": 0.0, "pen_kick": 0.0,
+                "ded_total_move": 0.0, "exactitud_acum": round(exactitud,3),
+                "fail_parts": "NO_SEG",
+                "level(exp)": level_exp, "level(meas)": "—", "y_rel_end": np.nan,
+                "rot(exp)": str(e.get("turn","NONE")).upper(), "rot(meas_deg)": np.nan,
+                "dir(exp_oct)": dir_exp or "—", "dir_used": "no-seg",
+                "elbow_median_deg": np.nan,
+                "stance(exp)": stance_exp, "stance(meas)": "—", "ankle_dist_sw": np.nan, "rear_foot_turn_deg": np.nan, "rear_foot_turn_ok": "—",
+                "kick_req": "—", "kick_amp": np.nan, "kick_peak": np.nan, "kick_type_pred": "—",
+                "kick_plantar_deg": np.nan, "kick_plantar_ok": "—", "kick_gaze_deg": np.nan, "kick_gaze_ok": "—",
+                "t0": np.nan, "t1": np.nan, "t_pose": np.nan, "dur_s": np.nan
+            })
+            continue
+
+        # Preferir índices de frame absolutos si el JSON los trae (a/b/pose_f)
+        if "a" in s and "b" in s:
+            a = int(s["a"]); b = int(s["b"])
+            # corregir si invertidos
+            if b < a: a, b = b, a
         else:
-            a, b = _uniform_window(i, len(expected))
-            t0, t1 = a/fps, b/fps
-            rot_meas_deg = _estimate_rotation_deg(df, a, b)
-            limb = _choose_active_limb(df, a, b)
-            arm_poly = _poly_from_limb(df, limb, a, b, n=20)
+            t0 = float(s["t_start"]); t1 = float(s["t_end"])
+            a  = _sec_to_csv_frame(t0); b  = _sec_to_csv_frame(t1)
+            if b < a: a, b = b, a
+
+        if b - a < 2:
+            b = min(nframes_csv - 1, a + 2)
+
+        # Frame “posición” (quietud + nivel objetivo)
+        if "pose_f" in s:
+            pose_f = int(s["pose_f"])
+            if pose_f < a or pose_f > b:
+                pose_f = _pose_frame_for_segment(df, a, b, level_exp, lvl_cfg)
+        else:
+            pose_f = _pose_frame_for_segment(df, a, b, level_exp, lvl_cfg)
+
+        # Tiempos consistentes con el CSV estimado (30/60fps, etc.)
+        t0_time = a / float(fps_csv_est)
+        t1_time = b / float(fps_csv_est)
 
         cat = _tech_category(tech_kor, tech_es)
 
+        rot_meas_deg = float(s.get("rotation_deg", 0.0))
         rot_exp_code = str(e.get("turn","NONE")).upper()
         cls_rot = _classify_rotation(rot_meas_deg, rot_exp_code, rot_tol)
 
-        wrist_id = 15 if limb == "L_WRIST" else (16 if limb == "R_WRIST" else (15 if _disp(_series_xy_range(df,15,a,b)) >= _disp(_series_xy_range(df,16,a,b)) else 16))
+        limb = str(s.get("active_limb",""))
+        wrist_id = 15 if limb == "L_WRIST" else 16
         rel = _wrist_rel_series_robust(df, a, b, wrist_id)
         y_rel_end = float(rel[-1]) if rel.size else float("nan")
         level_meas = _level_from_spec_thresholds(y_rel_end, lvl_cfg)
         cls_lvl = _classify_level(level_meas, level_exp)
 
         if limb in ("L_WRIST","R_WRIST") and dir_exp:
-            cls_dir = _classify_dir(arm_poly, dir_exp, oct_slack, dtw_thr)
+            cls_dir = _classify_dir(s.get("path", []), dir_exp, oct_slack, dtw_thr)
         else:
             cls_dir = "SKIP"
 
@@ -453,16 +651,31 @@ def score_one_video(
         else:
             comp_arms = max([cls_lvl, cls_rot], key=_severity_to_int)
 
-        stance_meas = _stance(df, a, b)
-        comp_legs   = _classify_stance(stance_meas, stance_exp)
+        meas_lab, feats = _stance_plus(df, a, b)
+        rear_turn = _rear_foot_turn_deg(feats, front_side=lead)
+        ankle_sw  = feats.get("ankle_dist_sw", _ankle_dist_sw(df,a,b))
+        comp_legs, legs_reason = _classify_stance_2024(meas_lab, stance_exp, ankle_sw, rear_turn, cfg)
 
         req_kick = _kick_required(tech_kor, tech_es)
+        kick_type_pred = str(s.get("kick_pred",""))
         if req_kick:
             amp, peak = _kick_metrics(df, a, b)
-            comp_kick = _classify_kick(amp, peak, ap_thr, peak_thr)
+            kside = _kicking_side(df, a, b) or lead
+            plantar_deg = _plantar_angle_deg(df, a, b, kside)
+            gaze_deg    = _gaze_to_toe_deg(df, a, b, kside)
+            comp_kick, kick_reason = _classify_kick_2024(
+                amp, peak, ap_thr, peak_thr,
+                kick_type_pred, "ap_chagi",
+                plantar_deg, plantar_thr,
+                gaze_deg, gaze_thr
+            )
+            plantar_ok = (isinstance(plantar_deg,(int,float)) and plantar_deg >= plantar_thr)
+            gaze_ok    = (isinstance(gaze_deg,(int,float)) and gaze_deg <= gaze_thr)
         else:
             amp, peak = (np.nan, np.nan)
-            comp_kick = "OK"
+            plantar_deg = np.nan; gaze_deg = np.nan
+            plantar_ok = "—"; gaze_ok = "—"
+            comp_kick = "OK"; kick_reason = "no_kick"
 
         pen_arms = _ded(comp_arms, penalty_leve, penalty_grave)
         pen_legs = _ded(comp_legs, penalty_leve, penalty_grave)
@@ -476,28 +689,44 @@ def score_one_video(
 
         fails = []
         if comp_arms in ("LEVE","GRAVE"): fails.append(f"brazos:{comp_arms.lower()}")
-        if comp_legs in ("LEVE","GRAVE"): fails.append(f"piernas:{comp_legs.lower()}")
+        if comp_legs in ("LEVE","GRAVE"): fails.append(f"piernas:{comp_legs.lower()}({legs_reason})")
         if req_kick and comp_kick in ("LEVE","GRAVE"): fails.append(f"patada:{comp_kick.lower()}")
         fail_parts = "; ".join(fails) if fails else ("OK" if is_correct else "—")
 
         rows.append({
             "video_id": video_id,
             "M": e["_key"], "tech_kor": tech_kor, "tech_es": tech_es,
+
             "comp_arms": comp_arms, "comp_legs": comp_legs, "comp_kick": comp_kick,
             "pen_arms": pen_arms, "pen_legs": pen_legs, "pen_kick": pen_kick,
             "ded_total_move": round(ded_total,3), "exactitud_acum": round(exactitud,3),
             "move_acc": round(move_acc,3), "is_correct": "yes" if is_correct else "no",
             "fail_parts": fail_parts,
+
             "level(exp)": level_exp, "level(meas)": level_meas,
             "y_rel_end": round(y_rel_end,4) if (isinstance(y_rel_end,(int,float)) and not math.isnan(y_rel_end)) else np.nan,
             "rot(exp)": rot_exp_code, "rot(meas_deg)": round(rot_meas_deg,2),
             "dir(exp_oct)": dir_exp or "—",
             "dir_used": "yes" if (dir_exp and limb in ("L_WRIST","R_WRIST")) else ("spec_only" if dir_exp else "no"),
             "elbow_median_deg": round(med_elbow,1),
+
+            "stance(exp)": stance_exp, "stance(meas)": meas_lab, "ankle_dist_sw": round(float(ankle_sw),3) if isinstance(ankle_sw,(int,float)) else np.nan,
+            "rear_foot_turn_deg": round(float(rear_turn),1) if isinstance(rear_turn,(int,float)) else np.nan,
+            "rear_foot_turn_ok": "yes" if (isinstance(rear_turn,(int,float)) and rear_turn >= float(cfg["stances"]["ap_seogi"].get("rear_foot_turn_min_deg",25.0))) else ("—" if not isinstance(rear_turn,(int,float)) or math.isnan(rear_turn) else "no"),
+
             "kick_req": "sí" if req_kick else "no",
             "kick_amp": round(float(amp),4) if isinstance(amp,(int,float)) else np.nan,
             "kick_peak": round(float(peak),4) if isinstance(peak,(int,float)) else np.nan,
-            "t0": round(a/fps,3), "t1": round(b/fps,3), "dur_s": round((b-a)/fps,3)
+            "kick_type_pred": kick_type_pred or "—",
+            "kick_plantar_deg": round(float(plantar_deg),1) if isinstance(plantar_deg,(int,float)) else np.nan,
+            "kick_plantar_ok": "yes" if (isinstance(plantar_deg,(int,float)) and plantar_deg >= plantar_thr) else ("—" if not req_kick else "no"),
+            "kick_gaze_deg": round(float(gaze_deg),1) if isinstance(gaze_deg,(int,float)) else np.nan,
+            "kick_gaze_ok": "yes" if (isinstance(gaze_deg,(int,float)) and gaze_deg <= gaze_thr) else ("—" if not req_kick else "no"),
+
+            # tiempos coherentes con el CSV (mejor para 60fps)
+            "t0": round(float(t0_time),3), "t1": round(float(t1_time),3),
+            "t_pose": round(float(pose_f/float(fps_csv_est)),3),
+            "dur_s": round(float((b-a)/float(fps_csv_est)),3)
         })
 
     df_det = pd.DataFrame(rows)
@@ -507,24 +736,32 @@ def score_one_video(
             "video_id": video_id, "moves_expected": len(expected),
             "moves_detected": len(segs), "moves_scored": 0,
             "moves_correct_90p": 0,
-            "ded_total": 0.0, "exactitud_final": 4.0,
-            "pct_arms_ok": 0.0, "pct_legs_ok": 0.0, "pct_kick_ok": 0.0
+            "ded_total": 0.0 + float(restart_penalty), 
+            "exactitud_final": max(clamp_min, 4.0 - float(restart_penalty)),
+            "pct_arms_ok": 0.0, "pct_legs_ok": 0.0, "pct_kick_ok": 0.0,
+            "restart_penalty": float(restart_penalty)
         }])
     else:
         def pct_ok(col):
             m = df_det[col].values
-            return float((m == "OK").sum()) / max(1, len(m))
+            mask = (m != "NS")
+            n = int(mask.sum())
+            return float((m[mask] == "OK").sum())/n if n>0 else np.nan
+
+        exact_final = float(df_det["exactitud_acum"].iloc[-1])
+        exact_final = max(clamp_min, exact_final - float(restart_penalty))
         df_sum = pd.DataFrame([{
             "video_id": video_id,
             "moves_expected": len(expected),
             "moves_detected": len(segs),
-            "moves_scored": int(len(df_det)),
+            "moves_scored": int((df_det["comp_arms"] != "NS").sum()),
             "moves_correct_90p": int((df_det["is_correct"] == "yes").sum()),
-            "ded_total": round(float(df_det["ded_total_move"].sum()),3),
-            "exactitud_final": round(float(df_det["exactitud_acum"].iloc[-1]),3),
+            "ded_total": round(float(df_det["ded_total_move"].sum()) + float(restart_penalty),3),
+            "exactitud_final": round(exact_final,3),
             "pct_arms_ok": round(100.0*pct_ok("comp_arms"),2),
             "pct_legs_ok": round(100.0*pct_ok("comp_legs"),2),
-            "pct_kick_ok": round(100.0*pct_ok("comp_kick"),2)
+            "pct_kick_ok": round(100.0*pct_ok("comp_kick"),2),
+            "restart_penalty": float(restart_penalty)
         }])
     return df_det, df_sum
 
@@ -532,15 +769,20 @@ def score_many_to_excel(
     *, moves_jsons: List[Path], spec_json: Path,
     out_xlsx: Path, landmarks_root: Path, alias: str, subset: Optional[str],
     pose_spec: Optional[Path],
-    penalty_leve: float, penalty_grave: float, clamp_min: float = 1.5
+    penalty_leve: float, penalty_grave: float, clamp_min: float = 1.5,
+    restarts_map: Optional[Dict[str,float]] = None
 ):
     det_list, sum_list = [], []
     for mj in moves_jsons:
         try:
+            mv = json.loads(Path(mj).read_text(encoding="utf-8"))
+            vid = mv.get("video_id", Path(mj).stem)
+            rpen = float(restarts_map.get(vid, 0.0)) if restarts_map else 0.0
             det, summ = score_one_video(
                 mj, spec_json,
                 landmarks_root=landmarks_root, alias=alias, subset=subset, pose_spec=pose_spec,
-                penalty_leve=penalty_leve, penalty_grave=penalty_grave, clamp_min=clamp_min
+                penalty_leve=penalty_leve, penalty_grave=penalty_grave, clamp_min=clamp_min,
+                restart_penalty=rpen
             )
             det_list.append(det); sum_list.append(summ)
         except Exception as e:
@@ -556,19 +798,21 @@ def score_many_to_excel(
             "comp_arms","comp_legs","comp_kick","pen_arms","pen_legs","pen_kick",
             "ded_total_move","exactitud_acum","move_acc","is_correct","fail_parts",
             "level(exp)","level(meas)","y_rel_end",
-            "rot(exp)","rot(meas_deg)","dir(exp_oct)","dir_used",
-            "elbow_median_deg","kick_req","kick_amp","kick_peak","t0","t1","dur_s"
+            "rot(exp)","rot(meas_deg)","dir(exp_oct)","dir_used","elbow_median_deg",
+            "stance(exp)","stance(meas)","ankle_dist_sw","rear_foot_turn_deg","rear_foot_turn_ok",
+            "kick_req","kick_amp","kick_peak","kick_type_pred","kick_plantar_deg","kick_plantar_ok","kick_gaze_deg","kick_gaze_ok",
+            "t0","t1","t_pose","dur_s"
         ])).to_excel(xw, index=False, sheet_name="detalle")
         (df_sum if not df_sum.empty else pd.DataFrame(columns=[
             "video_id","moves_expected","moves_detected","moves_scored","moves_correct_90p",
             "ded_total","exactitud_final",
-            "pct_arms_ok","pct_legs_ok","pct_kick_ok"
+            "pct_arms_ok","pct_legs_ok","pct_kick_ok","restart_penalty"
         ])).to_excel(xw, index=False, sheet_name="resumen")
 
 # ----------------- CLI -----------------
 
 def main():
-    ap = argparse.ArgumentParser(description="Scoring Pal Jang (8yang) con fallback de segmentos para cubrir todo el spec.")
+    ap = argparse.ArgumentParser(description="Scoring Pal Jang (8yang) con reglas 2024, patada (metatarso+mirada), y filas fijadas por spec.")
     ap.add_argument("--moves-json", help="JSON de movimientos (uno)")
     ap.add_argument("--moves-dir",  help="Carpeta con *_moves.json")
     ap.add_argument("--spec", required=True, help="Spec JSON 8yang")
@@ -579,8 +823,8 @@ def main():
     ap.add_argument("--pose-spec", default="", help="JSON con tolerancias y umbrales de pose")
     ap.add_argument("--penalty-leve", type=float, default=0.1)
     ap.add_argument("--penalty-grave", type=float, default=0.3)
-    ap.add_argument("--clamp-min", type=float, default=1.5)
-
+    ap.add_argument("--clamp-min", type=float, default=1.5, help="Nota mínima permitida (default 1.5)")
+    ap.add_argument("--restarts-csv", default="", help="CSV opcional con columnas video_id,restart_penalty (p.ej. 0.6)")
     args = ap.parse_args()
 
     spec = Path(args.spec)
@@ -604,11 +848,21 @@ def main():
     else:
         sys.exit("Indica --moves-json o --moves-dir")
 
+    restarts_map = None
+    if args.restarts_csv:
+        rp = Path(args.restarts_csv)
+        if not rp.exists(): sys.exit(f"No existe restarts-csv: {rp}")
+        tmp = pd.read_csv(rp)
+        if not {"video_id","restart_penalty"}.issubset(tmp.columns):
+            sys.exit("restarts-csv requiere columnas: video_id,restart_penalty")
+        restarts_map = {str(r.video_id): float(r.restart_penalty) for _,r in tmp.iterrows()}
+
     score_many_to_excel(
         moves_jsons=jsons, spec_json=spec, out_xlsx=out_xlsx,
         landmarks_root=landmarks_root, alias=alias, subset=subset,
         pose_spec=pose_spec,
-        penalty_leve=args.penalty_leve, penalty_grave=args.penalty_grave, clamp_min=args.clamp_min
+        penalty_leve=args.penalty_leve, penalty_grave=args.penalty_grave, clamp_min=args.clamp_min,
+        restarts_map=restarts_map
     )
 
 if __name__ == "__main__":
