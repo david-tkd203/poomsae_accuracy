@@ -1,0 +1,1269 @@
+C:\Users\david\OneDrive\Escritorio\Tesis\poomsae-accuracy
+├── config
+│   ├── patterns
+│   │   ├── 8yang_spec.json
+│   │   └── pose_spec.json
+│   └── default.yaml
+├── data
+│   ├── annotations
+│   │   ├── moves
+│   │   │   ├── 8yang_001.timeline.csv
+│   │   │   ├── 8yang_001_moves.json
+│   │   │   ├── 8yang_004_moves.json
+│   │   │   ├── 8yang_8yang_001_moves.json
+│   │   │   ├── 8yang_8yang_002_moves.json
+│   │   │   ├── 8yang_8yang_003_moves.json
+│   │   │   ├── 8yang_8yang_004_moves.json
+│   │   │   ├── 8yang_8yang_005_clip_moves.json
+│   │   │   ├── 8yang_8yang_005_moves.json
+│   │   │   ├── 8yang_8yang_006_moves.json
+│   │   │   ├── 8yang_8yang_007_moves.json
+│   │   │   ├── 8yang_8yang_008_moves.json
+│   │   │   ├── 8yang_8yang_009_moves.json
+│   │   │   ├── 8yang_8yang_010_moves.json
+│   │   │   ├── 8yang_8yang_011_moves.json
+│   │   │   ├── 8yang_8yang_012_moves.json
+│   │   │   ├── 8yang_8yang_013_moves.json
+│   │   │   ├── 8yang_8yang_014_moves.json
+│   │   │   ├── 8yang_8yang_015_moves.json
+│   │   │   ├── 8yang_8yang_016_moves.json
+│   │   │   ├── 8yang_8yang_017_moves.json
+│   │   │   ├── 8yang_8yang_018_moves.json
+│   │   │   ├── 8yang_8yang_019_moves.json
+│   │   │   ├── 8yang_8yang_020_moves.json
+│   │   │   ├── 8yang_8yang_021_moves.json
+│   │   │   ├── 8yang_8yang_022_moves.json
+│   │   │   ├── 8yang_8yang_023_moves.json
+│   │   │   ├── 8yang_8yang_024_moves.json
+│   │   │   ├── 8yang_8yang_025_moves.json
+│   │   │   ├── 8yang_8yang_026_moves.json
+│   │   │   ├── 8yang_8yang_027_moves.json
+│   │   │   ├── 8yang_8yang_028_moves.json
+│   │   │   └── 8yang_8yang_029_moves.json
+│   │   ├── preds
+│   │   │   └── 8yang
+│   │   │       └── train
+│   │   │           └── 8yang_009.json
+│   │   ├── previews
+│   │   │   └── 8yang
+│   │   │       └── train
+│   │   │           └── 8yang_009.mp4
+│   │   ├── reports
+│   │   │   ├── 8yang_001_report.xlsx
+│   │   │   └── 8yang_004_report.xlsx
+│   │   ├── snapshots
+│   │   │   ├── 8yang_009_grave_03.png
+│   │   │   ├── 8yang_009_leve_01.png
+│   │   │   ├── 8yang_009_ok.png
+│   │   │   ├── 8yang_017_1a_grave.png
+│   │   │   ├── 8yang_017_2a_ok.png
+│   │   │   ├── 8yang_017_grave_03.png
+│   │   │   ├── 8yang_017_leve_01.png
+│   │   │   └── 8yang_017_ok.png
+│   │   ├── snapshots_all
+│   │   │   ├── 8yang_009_10_grave.png
+│   │   │   ├── 8yang_009_11a_ok.png
+│   │   │   ├── 8yang_009_11b_grave.png
+│   │   │   ├── 8yang_009_12_grave.png
+│   │   │   ├── 8yang_009_13a_grave.png
+│   │   │   ├── 8yang_009_13b_grave.png
+│   │   │   ├── 8yang_009_14_grave.png
+│   │   │   ├── 8yang_009_15a_grave.png
+│   │   │   ├── 8yang_009_15b_grave.png
+│   │   │   ├── 8yang_009_15c_grave.png
+│   │   │   ├── 8yang_009_16_grave.png
+│   │   │   ├── 8yang_009_17_ok.png
+│   │   │   ├── 8yang_009_1a_grave.png
+│   │   │   ├── 8yang_009_1b_grave.png
+│   │   │   ├── 8yang_009_2a_ok.png
+│   │   │   ├── 8yang_009_2b_grave.png
+│   │   │   ├── 8yang_009_2c_grave.png
+│   │   │   ├── 8yang_009_3_ok.png
+│   │   │   ├── 8yang_009_4_grave.png
+│   │   │   ├── 8yang_009_5_grave.png
+│   │   │   ├── 8yang_009_6_grave.png
+│   │   │   ├── 8yang_009_7_grave.png
+│   │   │   ├── 8yang_009_8a_grave.png
+│   │   │   ├── 8yang_009_8b_grave.png
+│   │   │   ├── 8yang_009_9a_ok.png
+│   │   │   └── 8yang_009_9b_grave.png
+│   │   ├── 8yang_001_review.xlsx
+│   │   ├── 8yang_links.xlsx
+│   │   ├── 8yang_links_watch.txt
+│   │   ├── 8yang_shorts.txt
+│   │   ├── 8yang_train_analytics.xlsx
+│   │   ├── 8yang_train_by_move.xlsx
+│   │   ├── 8yang_train_report.xlsx
+│   │   ├── 8yang_train_report_001.xlsx
+│   │   └── review_8yang_001.xlsx
+│   ├── cookies
+│   │   └── yt.txt
+│   ├── landmarks
+│   │   └── 8yang
+│   │       ├── train
+│   │       │   ├── 8yang_001.csv
+│   │       │   ├── 8yang_002.csv
+│   │       │   ├── 8yang_003.csv
+│   │       │   ├── 8yang_004.csv
+│   │       │   ├── 8yang_005.csv
+│   │       │   ├── 8yang_005_clip.csv
+│   │       │   ├── 8yang_006.csv
+│   │       │   ├── 8yang_007.csv
+│   │       │   ├── 8yang_008.csv
+│   │       │   ├── 8yang_009.csv
+│   │       │   ├── 8yang_010.csv
+│   │       │   ├── 8yang_011.csv
+│   │       │   ├── 8yang_012.csv
+│   │       │   ├── 8yang_013.csv
+│   │       │   ├── 8yang_014.csv
+│   │       │   ├── 8yang_015.csv
+│   │       │   ├── 8yang_016.csv
+│   │       │   ├── 8yang_017.csv
+│   │       │   ├── 8yang_018.csv
+│   │       │   ├── 8yang_019.csv
+│   │       │   ├── 8yang_020.csv
+│   │       │   ├── 8yang_021.csv
+│   │       │   ├── 8yang_022.csv
+│   │       │   ├── 8yang_023.csv
+│   │       │   ├── 8yang_024.csv
+│   │       │   ├── 8yang_025.csv
+│   │       │   ├── 8yang_026.csv
+│   │       │   ├── 8yang_027.csv
+│   │       │   ├── 8yang_028.csv
+│   │       │   └── 8yang_029.csv
+│   │       ├── 8yang_005.csv
+│   │       └── 8yang_007.csv
+│   ├── models
+│   ├── previews
+│   │   ├── 8yang_8yang_001_preview.mp4
+│   │   ├── 8yang_8yang_002_preview.mp4
+│   │   ├── 8yang_8yang_003_preview.mp4
+│   │   ├── 8yang_8yang_004_preview.mp4
+│   │   ├── 8yang_8yang_005_preview.mp4
+│   │   ├── 8yang_8yang_006_preview.mp4
+│   │   ├── 8yang_8yang_007_preview.mp4
+│   │   ├── 8yang_8yang_008_preview.mp4
+│   │   ├── 8yang_8yang_009_preview.mp4
+│   │   ├── 8yang_8yang_010_preview.mp4
+│   │   ├── 8yang_8yang_011_preview.mp4
+│   │   ├── 8yang_8yang_012_preview.mp4
+│   │   ├── 8yang_8yang_013_preview.mp4
+│   │   ├── 8yang_8yang_014_preview.mp4
+│   │   ├── 8yang_8yang_015_preview.mp4
+│   │   ├── 8yang_8yang_016_preview.mp4
+│   │   ├── 8yang_8yang_017_preview.mp4
+│   │   ├── 8yang_8yang_018_preview.mp4
+│   │   ├── 8yang_8yang_019_preview.mp4
+│   │   ├── 8yang_8yang_020_preview.mp4
+│   │   ├── 8yang_8yang_021_preview.mp4
+│   │   ├── 8yang_8yang_022_preview.mp4
+│   │   ├── 8yang_8yang_023_preview.mp4
+│   │   ├── 8yang_8yang_024_preview.mp4
+│   │   ├── 8yang_8yang_025_preview.mp4
+│   │   ├── 8yang_8yang_026_preview.mp4
+│   │   └── 8yang_8yang_027_preview.mp4
+│   ├── raw_videos
+│   │   ├── 8yang
+│   │   │   └── train
+│   │   │       ├── 8yang_001.mp4
+│   │   │       ├── 8yang_002.webm
+│   │   │       ├── 8yang_003.webm
+│   │   │       ├── 8yang_004.webm
+│   │   │       ├── 8yang_004_cut.webm
+│   │   │       ├── 8yang_005.mp4
+│   │   │       ├── 8yang_005_clip.mp4
+│   │   │       ├── 8yang_006.mp4
+│   │   │       ├── 8yang_007.mp4
+│   │   │       ├── 8yang_008.mp4
+│   │   │       ├── 8yang_009.mp4
+│   │   │       ├── 8yang_010.mp4
+│   │   │       ├── 8yang_011.mp4
+│   │   │       ├── 8yang_012.mp4
+│   │   │       ├── 8yang_013.mp4
+│   │   │       ├── 8yang_014.mp4
+│   │   │       ├── 8yang_015.mp4
+│   │   │       ├── 8yang_016.mp4
+│   │   │       ├── 8yang_017.mp4
+│   │   │       ├── 8yang_018.mp4
+│   │   │       ├── 8yang_019.mp4
+│   │   │       ├── 8yang_020.mp4
+│   │   │       ├── 8yang_021.mp4
+│   │   │       ├── 8yang_022.mp4
+│   │   │       ├── 8yang_023.mp4
+│   │   │       ├── 8yang_024.mp4
+│   │   │       ├── 8yang_025.mp4
+│   │   │       ├── 8yang_026.mp4
+│   │   │       ├── 8yang_027.mp4
+│   │   │       ├── 8yang_028.mp4
+│   │   │       └── 8yang_029.mp4
+│   │   └── yang7
+│   │       ├── test
+│   │       ├── train
+│   │       └── val
+│   ├── raw_videos_bg
+│   │   └── yang8
+│   │       ├── test
+│   │       ├── train
+│   │       └── val
+│   └── snaps
+│       └── 8yang
+│           ├── 8yang_001_10_grave.png
+│           ├── 8yang_001_11a_ok.png
+│           ├── 8yang_001_11b_grave.png
+│           ├── 8yang_001_12_grave.png
+│           ├── 8yang_001_13a_grave.png
+│           ├── 8yang_001_13b_grave.png
+│           ├── 8yang_001_14_grave.png
+│           ├── 8yang_001_15a_ok.png
+│           ├── 8yang_001_15b_ok.png
+│           ├── 8yang_001_15c_grave.png
+│           ├── 8yang_001_16_grave.png
+│           ├── 8yang_001_17_grave.png
+│           ├── 8yang_001_18a_grave.png
+│           ├── 8yang_001_18b_ok.png
+│           ├── 8yang_001_19_grave.png
+│           ├── 8yang_001_1a_ok.png
+│           ├── 8yang_001_1b_grave.png
+│           ├── 8yang_001_20_ok.png
+│           ├── 8yang_001_21a_ok.png
+│           ├── 8yang_001_21b_grave.png
+│           ├── 8yang_001_22_grave.png
+│           ├── 8yang_001_23_grave.png
+│           ├── 8yang_001_24a_grave.png
+│           ├── 8yang_001_24b_grave.png
+│           ├── 8yang_001_2a_grave.png
+│           ├── 8yang_001_2b_grave.png
+│           ├── 8yang_001_2c_grave.png
+│           ├── 8yang_001_3_grave.png
+│           ├── 8yang_001_4_grave.png
+│           ├── 8yang_001_5_grave.png
+│           ├── 8yang_001_6_grave.png
+│           ├── 8yang_001_7_grave.png
+│           ├── 8yang_001_8a_grave.png
+│           ├── 8yang_001_8b_ok.png
+│           ├── 8yang_001_9a_ok.png
+│           ├── 8yang_001_9b_grave.png
+│           ├── 8yang_002_10_grave.png
+│           ├── 8yang_002_11a_ok.png
+│           ├── 8yang_002_11b_grave.png
+│           ├── 8yang_002_12_grave.png
+│           ├── 8yang_002_13a_ok.png
+│           ├── 8yang_002_13b_grave.png
+│           ├── 8yang_002_14_grave.png
+│           ├── 8yang_002_15a_grave.png
+│           ├── 8yang_002_15b_ok.png
+│           ├── 8yang_002_15c_grave.png
+│           ├── 8yang_002_16_grave.png
+│           ├── 8yang_002_17_ok.png
+│           ├── 8yang_002_18a_grave.png
+│           ├── 8yang_002_18b_grave.png
+│           ├── 8yang_002_19_grave.png
+│           ├── 8yang_002_1a_ok.png
+│           ├── 8yang_002_1b_grave.png
+│           ├── 8yang_002_20_ok.png
+│           ├── 8yang_002_21a_ok.png
+│           ├── 8yang_002_21b_grave.png
+│           ├── 8yang_002_22_grave.png
+│           ├── 8yang_002_23_grave.png
+│           ├── 8yang_002_24a_grave.png
+│           ├── 8yang_002_24b_grave.png
+│           ├── 8yang_002_2a_ok.png
+│           ├── 8yang_002_2b_ok.png
+│           ├── 8yang_002_2c_grave.png
+│           ├── 8yang_002_3_grave.png
+│           ├── 8yang_002_4_grave.png
+│           ├── 8yang_002_5_ok.png
+│           ├── 8yang_002_6_grave.png
+│           ├── 8yang_002_7_grave.png
+│           ├── 8yang_002_8a_grave.png
+│           ├── 8yang_002_8b_grave.png
+│           ├── 8yang_002_9a_grave.png
+│           ├── 8yang_002_9b_grave.png
+│           ├── 8yang_003_10_grave.png
+│           ├── 8yang_003_11a_grave.png
+│           ├── 8yang_003_11b_grave.png
+│           ├── 8yang_003_12_grave.png
+│           ├── 8yang_003_13a_ok.png
+│           ├── 8yang_003_13b_grave.png
+│           ├── 8yang_003_14_grave.png
+│           ├── 8yang_003_15a_grave.png
+│           ├── 8yang_003_15b_ok.png
+│           ├── 8yang_003_15c_ok.png
+│           ├── 8yang_003_16_grave.png
+│           ├── 8yang_003_17_grave.png
+│           ├── 8yang_003_18a_grave.png
+│           ├── 8yang_003_18b_grave.png
+│           ├── 8yang_003_19_grave.png
+│           ├── 8yang_003_1a_grave.png
+│           ├── 8yang_003_1b_grave.png
+│           ├── 8yang_003_20_ok.png
+│           ├── 8yang_003_21a_grave.png
+│           ├── 8yang_003_21b_grave.png
+│           ├── 8yang_003_22_grave.png
+│           ├── 8yang_003_23_grave.png
+│           ├── 8yang_003_24a_grave.png
+│           ├── 8yang_003_24b_ok.png
+│           ├── 8yang_003_2a_ok.png
+│           ├── 8yang_003_2b_grave.png
+│           ├── 8yang_003_2c_ok.png
+│           ├── 8yang_003_3_ok.png
+│           ├── 8yang_003_4_grave.png
+│           ├── 8yang_003_5_grave.png
+│           ├── 8yang_003_6_grave.png
+│           ├── 8yang_003_7_ok.png
+│           ├── 8yang_003_8a_grave.png
+│           ├── 8yang_003_8b_ok.png
+│           ├── 8yang_003_9a_grave.png
+│           ├── 8yang_003_9b_grave.png
+│           ├── 8yang_004_10_grave.png
+│           ├── 8yang_004_11a_ok.png
+│           ├── 8yang_004_11b_grave.png
+│           ├── 8yang_004_12_grave.png
+│           ├── 8yang_004_13a_grave.png
+│           ├── 8yang_004_13b_grave.png
+│           ├── 8yang_004_14_grave.png
+│           ├── 8yang_004_15a_ok.png
+│           ├── 8yang_004_15b_grave.png
+│           ├── 8yang_004_15c_ok.png
+│           ├── 8yang_004_16_grave.png
+│           ├── 8yang_004_17_ok.png
+│           ├── 8yang_004_18a_grave.png
+│           ├── 8yang_004_18b_grave.png
+│           ├── 8yang_004_19_grave.png
+│           ├── 8yang_004_1a_grave.png
+│           ├── 8yang_004_1b_ok.png
+│           ├── 8yang_004_20_grave.png
+│           ├── 8yang_004_21a_ok.png
+│           ├── 8yang_004_21b_grave.png
+│           ├── 8yang_004_22_grave.png
+│           ├── 8yang_004_23_grave.png
+│           ├── 8yang_004_24a_grave.png
+│           ├── 8yang_004_24b_ok.png
+│           ├── 8yang_004_2a_ok.png
+│           ├── 8yang_004_2b_ok.png
+│           ├── 8yang_004_2c_ok.png
+│           ├── 8yang_004_3_grave.png
+│           ├── 8yang_004_4_grave.png
+│           ├── 8yang_004_5_grave.png
+│           ├── 8yang_004_6_ok.png
+│           ├── 8yang_004_7_ok.png
+│           ├── 8yang_004_8a_grave.png
+│           ├── 8yang_004_8b_grave.png
+│           ├── 8yang_004_9a_grave.png
+│           ├── 8yang_004_9b_grave.png
+│           ├── 8yang_005_10_grave.png
+│           ├── 8yang_005_11a_grave.png
+│           ├── 8yang_005_11b_grave.png
+│           ├── 8yang_005_12_grave.png
+│           ├── 8yang_005_13a_ok.png
+│           ├── 8yang_005_13b_grave.png
+│           ├── 8yang_005_14_grave.png
+│           ├── 8yang_005_15a_grave.png
+│           ├── 8yang_005_15b_ok.png
+│           ├── 8yang_005_15c_grave.png
+│           ├── 8yang_005_16_grave.png
+│           ├── 8yang_005_17_ok.png
+│           ├── 8yang_005_18a_grave.png
+│           ├── 8yang_005_18b_grave.png
+│           ├── 8yang_005_19_grave.png
+│           ├── 8yang_005_1a_grave.png
+│           ├── 8yang_005_1b_grave.png
+│           ├── 8yang_005_20_grave.png
+│           ├── 8yang_005_21a_grave.png
+│           ├── 8yang_005_21b_grave.png
+│           ├── 8yang_005_22_grave.png
+│           ├── 8yang_005_23_grave.png
+│           ├── 8yang_005_24a_grave.png
+│           ├── 8yang_005_24b_grave.png
+│           ├── 8yang_005_2a_grave.png
+│           ├── 8yang_005_2b_grave.png
+│           ├── 8yang_005_2c_ok.png
+│           ├── 8yang_005_3_ok.png
+│           ├── 8yang_005_4_grave.png
+│           ├── 8yang_005_5_grave.png
+│           ├── 8yang_005_6_grave.png
+│           ├── 8yang_005_7_ok.png
+│           ├── 8yang_005_8a_grave.png
+│           ├── 8yang_005_8b_grave.png
+│           ├── 8yang_005_9a_grave.png
+│           ├── 8yang_005_9b_grave.png
+│           ├── 8yang_006_10_grave.png
+│           ├── 8yang_006_11a_ok.png
+│           ├── 8yang_006_11b_grave.png
+│           ├── 8yang_006_12_grave.png
+│           ├── 8yang_006_13a_grave.png
+│           ├── 8yang_006_13b_grave.png
+│           ├── 8yang_006_14_grave.png
+│           ├── 8yang_006_15a_grave.png
+│           ├── 8yang_006_15b_grave.png
+│           ├── 8yang_006_15c_grave.png
+│           ├── 8yang_006_16_grave.png
+│           ├── 8yang_006_17_ok.png
+│           ├── 8yang_006_18a_grave.png
+│           ├── 8yang_006_18b_grave.png
+│           ├── 8yang_006_19_grave.png
+│           ├── 8yang_006_1a_grave.png
+│           ├── 8yang_006_1b_grave.png
+│           ├── 8yang_006_20_ok.png
+│           ├── 8yang_006_21a_grave.png
+│           ├── 8yang_006_21b_grave.png
+│           ├── 8yang_006_22_grave.png
+│           ├── 8yang_006_23_ok.png
+│           ├── 8yang_006_24a_grave.png
+│           ├── 8yang_006_24b_grave.png
+│           ├── 8yang_006_2a_grave.png
+│           ├── 8yang_006_2b_ok.png
+│           ├── 8yang_006_2c_grave.png
+│           ├── 8yang_006_3_grave.png
+│           ├── 8yang_006_4_grave.png
+│           ├── 8yang_006_5_grave.png
+│           ├── 8yang_006_6_grave.png
+│           ├── 8yang_006_7_grave.png
+│           ├── 8yang_006_8a_grave.png
+│           ├── 8yang_006_8b_grave.png
+│           ├── 8yang_006_9a_ok.png
+│           ├── 8yang_006_9b_grave.png
+│           ├── 8yang_007_10_grave.png
+│           ├── 8yang_007_11a_ok.png
+│           ├── 8yang_007_11b_grave.png
+│           ├── 8yang_007_12_grave.png
+│           ├── 8yang_007_13a_grave.png
+│           ├── 8yang_007_13b_grave.png
+│           ├── 8yang_007_14_grave.png
+│           ├── 8yang_007_15a_grave.png
+│           ├── 8yang_007_15b_grave.png
+│           ├── 8yang_007_15c_ok.png
+│           ├── 8yang_007_16_grave.png
+│           ├── 8yang_007_17_grave.png
+│           ├── 8yang_007_18a_grave.png
+│           ├── 8yang_007_18b_grave.png
+│           ├── 8yang_007_19_grave.png
+│           ├── 8yang_007_1a_ok.png
+│           ├── 8yang_007_1b_grave.png
+│           ├── 8yang_007_20_grave.png
+│           ├── 8yang_007_21a_grave.png
+│           ├── 8yang_007_21b_grave.png
+│           ├── 8yang_007_22_grave.png
+│           ├── 8yang_007_23_grave.png
+│           ├── 8yang_007_24a_grave.png
+│           ├── 8yang_007_24b_grave.png
+│           ├── 8yang_007_2a_grave.png
+│           ├── 8yang_007_2b_grave.png
+│           ├── 8yang_007_2c_grave.png
+│           ├── 8yang_007_3_ok.png
+│           ├── 8yang_007_4_grave.png
+│           ├── 8yang_007_5_grave.png
+│           ├── 8yang_007_6_grave.png
+│           ├── 8yang_007_7_ok.png
+│           ├── 8yang_007_8a_grave.png
+│           ├── 8yang_007_8b_grave.png
+│           ├── 8yang_007_9a_grave.png
+│           ├── 8yang_007_9b_grave.png
+│           ├── 8yang_008_10_grave.png
+│           ├── 8yang_008_11a_ok.png
+│           ├── 8yang_008_11b_grave.png
+│           ├── 8yang_008_12_grave.png
+│           ├── 8yang_008_13a_ok.png
+│           ├── 8yang_008_13b_grave.png
+│           ├── 8yang_008_14_grave.png
+│           ├── 8yang_008_15a_grave.png
+│           ├── 8yang_008_15b_grave.png
+│           ├── 8yang_008_15c_ok.png
+│           ├── 8yang_008_16_grave.png
+│           ├── 8yang_008_17_grave.png
+│           ├── 8yang_008_18a_grave.png
+│           ├── 8yang_008_18b_grave.png
+│           ├── 8yang_008_19_grave.png
+│           ├── 8yang_008_1a_grave.png
+│           ├── 8yang_008_1b_grave.png
+│           ├── 8yang_008_20_ok.png
+│           ├── 8yang_008_21a_grave.png
+│           ├── 8yang_008_21b_grave.png
+│           ├── 8yang_008_22_grave.png
+│           ├── 8yang_008_23_grave.png
+│           ├── 8yang_008_24a_grave.png
+│           ├── 8yang_008_24b_grave.png
+│           ├── 8yang_008_2a_ok.png
+│           ├── 8yang_008_2b_ok.png
+│           ├── 8yang_008_2c_grave.png
+│           ├── 8yang_008_3_ok.png
+│           ├── 8yang_008_4_grave.png
+│           ├── 8yang_008_5_grave.png
+│           ├── 8yang_008_6_grave.png
+│           ├── 8yang_008_7_ok.png
+│           ├── 8yang_008_8a_grave.png
+│           ├── 8yang_008_8b_ok.png
+│           ├── 8yang_008_9a_grave.png
+│           ├── 8yang_008_9b_grave.png
+│           ├── 8yang_009_10_grave.png
+│           ├── 8yang_009_11a_ok.png
+│           ├── 8yang_009_11b_grave.png
+│           ├── 8yang_009_12_grave.png
+│           ├── 8yang_009_13a_grave.png
+│           ├── 8yang_009_13b_grave.png
+│           ├── 8yang_009_14_grave.png
+│           ├── 8yang_009_15a_grave.png
+│           ├── 8yang_009_15b_grave.png
+│           ├── 8yang_009_15c_grave.png
+│           ├── 8yang_009_16_grave.png
+│           ├── 8yang_009_17_ok.png
+│           ├── 8yang_009_1a_grave.png
+│           ├── 8yang_009_1b_grave.png
+│           ├── 8yang_009_2a_ok.png
+│           ├── 8yang_009_2b_grave.png
+│           ├── 8yang_009_2c_grave.png
+│           ├── 8yang_009_3_ok.png
+│           ├── 8yang_009_4_grave.png
+│           ├── 8yang_009_5_grave.png
+│           ├── 8yang_009_6_grave.png
+│           ├── 8yang_009_7_grave.png
+│           ├── 8yang_009_8a_grave.png
+│           ├── 8yang_009_8b_grave.png
+│           ├── 8yang_009_9a_ok.png
+│           ├── 8yang_009_9b_grave.png
+│           ├── 8yang_010_10_grave.png
+│           ├── 8yang_010_11a_grave.png
+│           ├── 8yang_010_11b_grave.png
+│           ├── 8yang_010_12_grave.png
+│           ├── 8yang_010_13a_grave.png
+│           ├── 8yang_010_13b_grave.png
+│           ├── 8yang_010_14_grave.png
+│           ├── 8yang_010_15a_grave.png
+│           ├── 8yang_010_15b_grave.png
+│           ├── 8yang_010_15c_ok.png
+│           ├── 8yang_010_16_grave.png
+│           ├── 8yang_010_17_ok.png
+│           ├── 8yang_010_18a_grave.png
+│           ├── 8yang_010_18b_grave.png
+│           ├── 8yang_010_19_grave.png
+│           ├── 8yang_010_1a_grave.png
+│           ├── 8yang_010_1b_ok.png
+│           ├── 8yang_010_20_ok.png
+│           ├── 8yang_010_21a_ok.png
+│           ├── 8yang_010_21b_grave.png
+│           ├── 8yang_010_22_grave.png
+│           ├── 8yang_010_23_grave.png
+│           ├── 8yang_010_24a_ok.png
+│           ├── 8yang_010_24b_grave.png
+│           ├── 8yang_010_2a_grave.png
+│           ├── 8yang_010_2b_ok.png
+│           ├── 8yang_010_2c_grave.png
+│           ├── 8yang_010_3_grave.png
+│           ├── 8yang_010_4_grave.png
+│           ├── 8yang_010_5_ok.png
+│           ├── 8yang_010_6_grave.png
+│           ├── 8yang_010_7_grave.png
+│           ├── 8yang_010_8a_grave.png
+│           ├── 8yang_010_8b_grave.png
+│           ├── 8yang_010_9a_grave.png
+│           ├── 8yang_010_9b_grave.png
+│           ├── 8yang_011_10_grave.png
+│           ├── 8yang_011_11a_ok.png
+│           ├── 8yang_011_11b_grave.png
+│           ├── 8yang_011_12_grave.png
+│           ├── 8yang_011_13a_ok.png
+│           ├── 8yang_011_13b_grave.png
+│           ├── 8yang_011_14_grave.png
+│           ├── 8yang_011_15a_grave.png
+│           ├── 8yang_011_15b_grave.png
+│           ├── 8yang_011_15c_grave.png
+│           ├── 8yang_011_16_grave.png
+│           ├── 8yang_011_17_ok.png
+│           ├── 8yang_011_18a_grave.png
+│           ├── 8yang_011_18b_grave.png
+│           ├── 8yang_011_19_grave.png
+│           ├── 8yang_011_1a_grave.png
+│           ├── 8yang_011_1b_grave.png
+│           ├── 8yang_011_20_grave.png
+│           ├── 8yang_011_21a_grave.png
+│           ├── 8yang_011_21b_grave.png
+│           ├── 8yang_011_22_grave.png
+│           ├── 8yang_011_23_grave.png
+│           ├── 8yang_011_24a_grave.png
+│           ├── 8yang_011_24b_grave.png
+│           ├── 8yang_011_2a_ok.png
+│           ├── 8yang_011_2b_grave.png
+│           ├── 8yang_011_2c_ok.png
+│           ├── 8yang_011_3_ok.png
+│           ├── 8yang_011_4_grave.png
+│           ├── 8yang_011_5_grave.png
+│           ├── 8yang_011_6_grave.png
+│           ├── 8yang_011_7_grave.png
+│           ├── 8yang_011_8a_grave.png
+│           ├── 8yang_011_8b_grave.png
+│           ├── 8yang_011_9a_grave.png
+│           ├── 8yang_011_9b_grave.png
+│           ├── 8yang_012_10_grave.png
+│           ├── 8yang_012_11a_ok.png
+│           ├── 8yang_012_11b_grave.png
+│           ├── 8yang_012_12_grave.png
+│           ├── 8yang_012_13a_ok.png
+│           ├── 8yang_012_13b_grave.png
+│           ├── 8yang_012_14_grave.png
+│           ├── 8yang_012_15a_grave.png
+│           ├── 8yang_012_15b_ok.png
+│           ├── 8yang_012_15c_ok.png
+│           ├── 8yang_012_16_grave.png
+│           ├── 8yang_012_17_grave.png
+│           ├── 8yang_012_18a_grave.png
+│           ├── 8yang_012_18b_grave.png
+│           ├── 8yang_012_19_grave.png
+│           ├── 8yang_012_1a_grave.png
+│           ├── 8yang_012_1b_ok.png
+│           ├── 8yang_012_20_grave.png
+│           ├── 8yang_012_21a_ok.png
+│           ├── 8yang_012_21b_grave.png
+│           ├── 8yang_012_22_grave.png
+│           ├── 8yang_012_23_grave.png
+│           ├── 8yang_012_24a_ok.png
+│           ├── 8yang_012_24b_grave.png
+│           ├── 8yang_012_2a_grave.png
+│           ├── 8yang_012_2b_grave.png
+│           ├── 8yang_012_2c_ok.png
+│           ├── 8yang_012_3_grave.png
+│           ├── 8yang_012_4_grave.png
+│           ├── 8yang_012_5_grave.png
+│           ├── 8yang_012_6_grave.png
+│           ├── 8yang_012_7_grave.png
+│           ├── 8yang_012_8a_grave.png
+│           ├── 8yang_012_8b_grave.png
+│           ├── 8yang_012_9a_grave.png
+│           ├── 8yang_012_9b_grave.png
+│           ├── 8yang_013_10_grave.png
+│           ├── 8yang_013_11a_grave.png
+│           ├── 8yang_013_11b_grave.png
+│           ├── 8yang_013_12_ok.png
+│           ├── 8yang_013_13a_ok.png
+│           ├── 8yang_013_13b_grave.png
+│           ├── 8yang_013_14_grave.png
+│           ├── 8yang_013_15a_grave.png
+│           ├── 8yang_013_15b_ok.png
+│           ├── 8yang_013_15c_ok.png
+│           ├── 8yang_013_16_grave.png
+│           ├── 8yang_013_17_ok.png
+│           ├── 8yang_013_18a_grave.png
+│           ├── 8yang_013_18b_grave.png
+│           ├── 8yang_013_19_grave.png
+│           ├── 8yang_013_1a_grave.png
+│           ├── 8yang_013_1b_ok.png
+│           ├── 8yang_013_20_grave.png
+│           ├── 8yang_013_21a_grave.png
+│           ├── 8yang_013_21b_grave.png
+│           ├── 8yang_013_22_grave.png
+│           ├── 8yang_013_23_grave.png
+│           ├── 8yang_013_24a_grave.png
+│           ├── 8yang_013_24b_grave.png
+│           ├── 8yang_013_2a_grave.png
+│           ├── 8yang_013_2b_ok.png
+│           ├── 8yang_013_2c_grave.png
+│           ├── 8yang_013_3_grave.png
+│           ├── 8yang_013_4_grave.png
+│           ├── 8yang_013_5_grave.png
+│           ├── 8yang_013_6_grave.png
+│           ├── 8yang_013_7_ok.png
+│           ├── 8yang_013_8a_grave.png
+│           ├── 8yang_013_8b_grave.png
+│           ├── 8yang_013_9a_ok.png
+│           ├── 8yang_013_9b_grave.png
+│           ├── 8yang_014_10_grave.png
+│           ├── 8yang_014_11a_grave.png
+│           ├── 8yang_014_11b_grave.png
+│           ├── 8yang_014_12_grave.png
+│           ├── 8yang_014_13a_ok.png
+│           ├── 8yang_014_13b_grave.png
+│           ├── 8yang_014_14_grave.png
+│           ├── 8yang_014_15a_grave.png
+│           ├── 8yang_014_15b_grave.png
+│           ├── 8yang_014_15c_ok.png
+│           ├── 8yang_014_16_grave.png
+│           ├── 8yang_014_17_ok.png
+│           ├── 8yang_014_18a_grave.png
+│           ├── 8yang_014_18b_grave.png
+│           ├── 8yang_014_19_grave.png
+│           ├── 8yang_014_1a_grave.png
+│           ├── 8yang_014_1b_grave.png
+│           ├── 8yang_014_20_ok.png
+│           ├── 8yang_014_21a_ok.png
+│           ├── 8yang_014_21b_grave.png
+│           ├── 8yang_014_22_grave.png
+│           ├── 8yang_014_23_grave.png
+│           ├── 8yang_014_24a_grave.png
+│           ├── 8yang_014_24b_grave.png
+│           ├── 8yang_014_2a_ok.png
+│           ├── 8yang_014_2b_grave.png
+│           ├── 8yang_014_2c_grave.png
+│           ├── 8yang_014_3_grave.png
+│           ├── 8yang_014_4_grave.png
+│           ├── 8yang_014_5_grave.png
+│           ├── 8yang_014_6_grave.png
+│           ├── 8yang_014_7_ok.png
+│           ├── 8yang_014_8a_grave.png
+│           ├── 8yang_014_8b_grave.png
+│           ├── 8yang_014_9a_ok.png
+│           ├── 8yang_014_9b_grave.png
+│           ├── 8yang_015_10_grave.png
+│           ├── 8yang_015_11a_grave.png
+│           ├── 8yang_015_11b_grave.png
+│           ├── 8yang_015_12_grave.png
+│           ├── 8yang_015_13a_ok.png
+│           ├── 8yang_015_13b_grave.png
+│           ├── 8yang_015_14_grave.png
+│           ├── 8yang_015_15a_grave.png
+│           ├── 8yang_015_15b_ok.png
+│           ├── 8yang_015_15c_ok.png
+│           ├── 8yang_015_16_grave.png
+│           ├── 8yang_015_17_ok.png
+│           ├── 8yang_015_18a_grave.png
+│           ├── 8yang_015_18b_grave.png
+│           ├── 8yang_015_19_grave.png
+│           ├── 8yang_015_1a_grave.png
+│           ├── 8yang_015_1b_grave.png
+│           ├── 8yang_015_20_ok.png
+│           ├── 8yang_015_21a_grave.png
+│           ├── 8yang_015_21b_grave.png
+│           ├── 8yang_015_22_grave.png
+│           ├── 8yang_015_23_grave.png
+│           ├── 8yang_015_24a_grave.png
+│           ├── 8yang_015_24b_grave.png
+│           ├── 8yang_015_2a_ok.png
+│           ├── 8yang_015_2b_ok.png
+│           ├── 8yang_015_2c_grave.png
+│           ├── 8yang_015_3_ok.png
+│           ├── 8yang_015_4_grave.png
+│           ├── 8yang_015_5_grave.png
+│           ├── 8yang_015_6_grave.png
+│           ├── 8yang_015_7_grave.png
+│           ├── 8yang_015_8a_grave.png
+│           ├── 8yang_015_8b_grave.png
+│           ├── 8yang_015_9a_grave.png
+│           ├── 8yang_015_9b_grave.png
+│           ├── 8yang_016_10_grave.png
+│           ├── 8yang_016_11a_ok.png
+│           ├── 8yang_016_11b_grave.png
+│           ├── 8yang_016_12_grave.png
+│           ├── 8yang_016_13a_grave.png
+│           ├── 8yang_016_13b_grave.png
+│           ├── 8yang_016_14_grave.png
+│           ├── 8yang_016_15a_ok.png
+│           ├── 8yang_016_15b_grave.png
+│           ├── 8yang_016_15c_ok.png
+│           ├── 8yang_016_16_grave.png
+│           ├── 8yang_016_17_ok.png
+│           ├── 8yang_016_18a_ok.png
+│           ├── 8yang_016_18b_grave.png
+│           ├── 8yang_016_19_grave.png
+│           ├── 8yang_016_1a_grave.png
+│           ├── 8yang_016_1b_grave.png
+│           ├── 8yang_016_20_ok.png
+│           ├── 8yang_016_21a_grave.png
+│           ├── 8yang_016_21b_ok.png
+│           ├── 8yang_016_22_grave.png
+│           ├── 8yang_016_23_grave.png
+│           ├── 8yang_016_24a_ok.png
+│           ├── 8yang_016_24b_ok.png
+│           ├── 8yang_016_2a_grave.png
+│           ├── 8yang_016_2b_grave.png
+│           ├── 8yang_016_2c_grave.png
+│           ├── 8yang_016_3_grave.png
+│           ├── 8yang_016_4_grave.png
+│           ├── 8yang_016_5_grave.png
+│           ├── 8yang_016_6_grave.png
+│           ├── 8yang_016_7_grave.png
+│           ├── 8yang_016_8a_grave.png
+│           ├── 8yang_016_8b_grave.png
+│           ├── 8yang_016_9a_grave.png
+│           ├── 8yang_016_9b_grave.png
+│           ├── 8yang_017_10_grave.png
+│           ├── 8yang_017_11a_grave.png
+│           ├── 8yang_017_11b_grave.png
+│           ├── 8yang_017_12_grave.png
+│           ├── 8yang_017_13a_ok.png
+│           ├── 8yang_017_13b_grave.png
+│           ├── 8yang_017_14_grave.png
+│           ├── 8yang_017_15a_grave.png
+│           ├── 8yang_017_15b_ok.png
+│           ├── 8yang_017_15c_grave.png
+│           ├── 8yang_017_16_grave.png
+│           ├── 8yang_017_17_ok.png
+│           ├── 8yang_017_18a_grave.png
+│           ├── 8yang_017_18b_grave.png
+│           ├── 8yang_017_19_grave.png
+│           ├── 8yang_017_1a_grave.png
+│           ├── 8yang_017_1b_grave.png
+│           ├── 8yang_017_20_ok.png
+│           ├── 8yang_017_21a_grave.png
+│           ├── 8yang_017_21b_grave.png
+│           ├── 8yang_017_22_grave.png
+│           ├── 8yang_017_23_grave.png
+│           ├── 8yang_017_24a_ok.png
+│           ├── 8yang_017_24b_ok.png
+│           ├── 8yang_017_2a_ok.png
+│           ├── 8yang_017_2b_grave.png
+│           ├── 8yang_017_2c_grave.png
+│           ├── 8yang_017_3_ok.png
+│           ├── 8yang_017_4_grave.png
+│           ├── 8yang_017_5_grave.png
+│           ├── 8yang_017_6_grave.png
+│           ├── 8yang_017_7_ok.png
+│           ├── 8yang_017_8a_grave.png
+│           ├── 8yang_017_8b_grave.png
+│           ├── 8yang_017_9a_grave.png
+│           ├── 8yang_017_9b_grave.png
+│           ├── 8yang_018_10_grave.png
+│           ├── 8yang_018_11a_ok.png
+│           ├── 8yang_018_11b_grave.png
+│           ├── 8yang_018_12_grave.png
+│           ├── 8yang_018_13a_ok.png
+│           ├── 8yang_018_13b_grave.png
+│           ├── 8yang_018_14_grave.png
+│           ├── 8yang_018_15a_grave.png
+│           ├── 8yang_018_15b_grave.png
+│           ├── 8yang_018_15c_ok.png
+│           ├── 8yang_018_16_grave.png
+│           ├── 8yang_018_17_ok.png
+│           ├── 8yang_018_18a_grave.png
+│           ├── 8yang_018_18b_grave.png
+│           ├── 8yang_018_19_grave.png
+│           ├── 8yang_018_1a_grave.png
+│           ├── 8yang_018_1b_grave.png
+│           ├── 8yang_018_20_ok.png
+│           ├── 8yang_018_21a_grave.png
+│           ├── 8yang_018_21b_grave.png
+│           ├── 8yang_018_22_grave.png
+│           ├── 8yang_018_23_grave.png
+│           ├── 8yang_018_24a_grave.png
+│           ├── 8yang_018_24b_grave.png
+│           ├── 8yang_018_2a_ok.png
+│           ├── 8yang_018_2b_ok.png
+│           ├── 8yang_018_2c_grave.png
+│           ├── 8yang_018_3_ok.png
+│           ├── 8yang_018_4_grave.png
+│           ├── 8yang_018_5_grave.png
+│           ├── 8yang_018_6_grave.png
+│           ├── 8yang_018_7_grave.png
+│           ├── 8yang_018_8a_grave.png
+│           ├── 8yang_018_8b_grave.png
+│           ├── 8yang_018_9a_grave.png
+│           ├── 8yang_018_9b_grave.png
+│           ├── 8yang_019_10_grave.png
+│           ├── 8yang_019_11a_ok.png
+│           ├── 8yang_019_11b_grave.png
+│           ├── 8yang_019_12_grave.png
+│           ├── 8yang_019_13a_ok.png
+│           ├── 8yang_019_13b_grave.png
+│           ├── 8yang_019_14_grave.png
+│           ├── 8yang_019_15a_ok.png
+│           ├── 8yang_019_15b_ok.png
+│           ├── 8yang_019_15c_ok.png
+│           ├── 8yang_019_16_grave.png
+│           ├── 8yang_019_17_ok.png
+│           ├── 8yang_019_18a_grave.png
+│           ├── 8yang_019_18b_grave.png
+│           ├── 8yang_019_19_grave.png
+│           ├── 8yang_019_1a_grave.png
+│           ├── 8yang_019_1b_grave.png
+│           ├── 8yang_019_20_grave.png
+│           ├── 8yang_019_21a_grave.png
+│           ├── 8yang_019_21b_grave.png
+│           ├── 8yang_019_22_grave.png
+│           ├── 8yang_019_23_ok.png
+│           ├── 8yang_019_24a_grave.png
+│           ├── 8yang_019_24b_grave.png
+│           ├── 8yang_019_2a_grave.png
+│           ├── 8yang_019_2b_grave.png
+│           ├── 8yang_019_2c_grave.png
+│           ├── 8yang_019_3_grave.png
+│           ├── 8yang_019_4_grave.png
+│           ├── 8yang_019_5_grave.png
+│           ├── 8yang_019_6_grave.png
+│           ├── 8yang_019_7_grave.png
+│           ├── 8yang_019_8a_grave.png
+│           ├── 8yang_019_8b_grave.png
+│           ├── 8yang_019_9a_grave.png
+│           ├── 8yang_019_9b_grave.png
+│           ├── 8yang_020_10_grave.png
+│           ├── 8yang_020_11a_ok.png
+│           ├── 8yang_020_11b_grave.png
+│           ├── 8yang_020_12_grave.png
+│           ├── 8yang_020_13a_ok.png
+│           ├── 8yang_020_13b_grave.png
+│           ├── 8yang_020_14_grave.png
+│           ├── 8yang_020_15a_grave.png
+│           ├── 8yang_020_15b_grave.png
+│           ├── 8yang_020_15c_grave.png
+│           ├── 8yang_020_16_grave.png
+│           ├── 8yang_020_17_ok.png
+│           ├── 8yang_020_18a_grave.png
+│           ├── 8yang_020_18b_ok.png
+│           ├── 8yang_020_19_grave.png
+│           ├── 8yang_020_1a_grave.png
+│           ├── 8yang_020_1b_grave.png
+│           ├── 8yang_020_20_ok.png
+│           ├── 8yang_020_21a_grave.png
+│           ├── 8yang_020_21b_grave.png
+│           ├── 8yang_020_22_grave.png
+│           ├── 8yang_020_23_grave.png
+│           ├── 8yang_020_24a_grave.png
+│           ├── 8yang_020_24b_grave.png
+│           ├── 8yang_020_2a_ok.png
+│           ├── 8yang_020_2b_ok.png
+│           ├── 8yang_020_2c_grave.png
+│           ├── 8yang_020_3_ok.png
+│           ├── 8yang_020_4_grave.png
+│           ├── 8yang_020_5_grave.png
+│           ├── 8yang_020_6_grave.png
+│           ├── 8yang_020_7_grave.png
+│           ├── 8yang_020_8a_grave.png
+│           ├── 8yang_020_8b_grave.png
+│           ├── 8yang_020_9a_grave.png
+│           ├── 8yang_020_9b_grave.png
+│           ├── 8yang_021_10_grave.png
+│           ├── 8yang_021_11a_ok.png
+│           ├── 8yang_021_11b_grave.png
+│           ├── 8yang_021_12_grave.png
+│           ├── 8yang_021_13a_ok.png
+│           ├── 8yang_021_13b_grave.png
+│           ├── 8yang_021_14_grave.png
+│           ├── 8yang_021_15a_grave.png
+│           ├── 8yang_021_15b_ok.png
+│           ├── 8yang_021_15c_ok.png
+│           ├── 8yang_021_16_grave.png
+│           ├── 8yang_021_17_grave.png
+│           ├── 8yang_021_18a_grave.png
+│           ├── 8yang_021_18b_grave.png
+│           ├── 8yang_021_19_grave.png
+│           ├── 8yang_021_1a_grave.png
+│           ├── 8yang_021_1b_grave.png
+│           ├── 8yang_021_20_ok.png
+│           ├── 8yang_021_21a_grave.png
+│           ├── 8yang_021_21b_grave.png
+│           ├── 8yang_021_22_grave.png
+│           ├── 8yang_021_23_grave.png
+│           ├── 8yang_021_24a_ok.png
+│           ├── 8yang_021_24b_grave.png
+│           ├── 8yang_021_2a_grave.png
+│           ├── 8yang_021_2b_ok.png
+│           ├── 8yang_021_2c_grave.png
+│           ├── 8yang_021_3_grave.png
+│           ├── 8yang_021_4_grave.png
+│           ├── 8yang_021_5_grave.png
+│           ├── 8yang_021_6_grave.png
+│           ├── 8yang_021_7_grave.png
+│           ├── 8yang_021_8a_grave.png
+│           ├── 8yang_021_8b_grave.png
+│           ├── 8yang_021_9a_grave.png
+│           ├── 8yang_021_9b_grave.png
+│           ├── 8yang_022_10_grave.png
+│           ├── 8yang_022_11a_ok.png
+│           ├── 8yang_022_11b_grave.png
+│           ├── 8yang_022_12_grave.png
+│           ├── 8yang_022_13a_grave.png
+│           ├── 8yang_022_13b_grave.png
+│           ├── 8yang_022_14_grave.png
+│           ├── 8yang_022_15a_grave.png
+│           ├── 8yang_022_15b_grave.png
+│           ├── 8yang_022_15c_grave.png
+│           ├── 8yang_022_16_grave.png
+│           ├── 8yang_022_17_ok.png
+│           ├── 8yang_022_18a_ok.png
+│           ├── 8yang_022_18b_grave.png
+│           ├── 8yang_022_19_grave.png
+│           ├── 8yang_022_1a_grave.png
+│           ├── 8yang_022_1b_grave.png
+│           ├── 8yang_022_20_grave.png
+│           ├── 8yang_022_21a_grave.png
+│           ├── 8yang_022_21b_grave.png
+│           ├── 8yang_022_22_grave.png
+│           ├── 8yang_022_23_grave.png
+│           ├── 8yang_022_24a_ok.png
+│           ├── 8yang_022_24b_ok.png
+│           ├── 8yang_022_2a_grave.png
+│           ├── 8yang_022_2b_grave.png
+│           ├── 8yang_022_2c_ok.png
+│           ├── 8yang_022_3_grave.png
+│           ├── 8yang_022_4_grave.png
+│           ├── 8yang_022_5_ok.png
+│           ├── 8yang_022_6_grave.png
+│           ├── 8yang_022_7_grave.png
+│           ├── 8yang_022_8a_grave.png
+│           ├── 8yang_022_8b_grave.png
+│           ├── 8yang_022_9a_ok.png
+│           ├── 8yang_022_9b_grave.png
+│           ├── 8yang_023_10_grave.png
+│           ├── 8yang_023_11a_grave.png
+│           ├── 8yang_023_11b_grave.png
+│           ├── 8yang_023_12_grave.png
+│           ├── 8yang_023_13a_ok.png
+│           ├── 8yang_023_13b_grave.png
+│           ├── 8yang_023_14_grave.png
+│           ├── 8yang_023_15a_grave.png
+│           ├── 8yang_023_15b_ok.png
+│           ├── 8yang_023_15c_ok.png
+│           ├── 8yang_023_16_grave.png
+│           ├── 8yang_023_17_grave.png
+│           ├── 8yang_023_18a_grave.png
+│           ├── 8yang_023_18b_grave.png
+│           ├── 8yang_023_19_grave.png
+│           ├── 8yang_023_1a_ok.png
+│           ├── 8yang_023_1b_grave.png
+│           ├── 8yang_023_20_ok.png
+│           ├── 8yang_023_21a_grave.png
+│           ├── 8yang_023_21b_grave.png
+│           ├── 8yang_023_22_grave.png
+│           ├── 8yang_023_23_grave.png
+│           ├── 8yang_023_24a_grave.png
+│           ├── 8yang_023_24b_grave.png
+│           ├── 8yang_023_2a_ok.png
+│           ├── 8yang_023_2b_ok.png
+│           ├── 8yang_023_2c_grave.png
+│           ├── 8yang_023_3_grave.png
+│           ├── 8yang_023_4_grave.png
+│           ├── 8yang_023_5_grave.png
+│           ├── 8yang_023_6_grave.png
+│           ├── 8yang_023_7_grave.png
+│           ├── 8yang_023_8a_grave.png
+│           ├── 8yang_023_8b_ok.png
+│           ├── 8yang_023_9a_grave.png
+│           ├── 8yang_023_9b_grave.png
+│           ├── 8yang_024_10_grave.png
+│           ├── 8yang_024_11a_ok.png
+│           ├── 8yang_024_11b_grave.png
+│           ├── 8yang_024_12_grave.png
+│           ├── 8yang_024_13a_ok.png
+│           ├── 8yang_024_13b_grave.png
+│           ├── 8yang_024_14_grave.png
+│           ├── 8yang_024_15a_grave.png
+│           ├── 8yang_024_15b_ok.png
+│           ├── 8yang_024_15c_grave.png
+│           ├── 8yang_024_16_grave.png
+│           ├── 8yang_024_17_grave.png
+│           ├── 8yang_024_18a_ok.png
+│           ├── 8yang_024_18b_grave.png
+│           ├── 8yang_024_19_grave.png
+│           ├── 8yang_024_1a_grave.png
+│           ├── 8yang_024_1b_grave.png
+│           ├── 8yang_024_20_grave.png
+│           ├── 8yang_024_21a_grave.png
+│           ├── 8yang_024_21b_ok.png
+│           ├── 8yang_024_22_grave.png
+│           ├── 8yang_024_23_grave.png
+│           ├── 8yang_024_24a_ok.png
+│           ├── 8yang_024_24b_grave.png
+│           ├── 8yang_024_2a_ok.png
+│           ├── 8yang_024_2b_ok.png
+│           ├── 8yang_024_2c_ok.png
+│           ├── 8yang_024_3_grave.png
+│           ├── 8yang_024_4_grave.png
+│           ├── 8yang_024_5_grave.png
+│           ├── 8yang_024_6_grave.png
+│           ├── 8yang_024_7_ok.png
+│           ├── 8yang_024_8a_grave.png
+│           ├── 8yang_024_8b_grave.png
+│           ├── 8yang_024_9a_grave.png
+│           ├── 8yang_024_9b_grave.png
+│           ├── 8yang_025_10_grave.png
+│           ├── 8yang_025_11a_grave.png
+│           ├── 8yang_025_11b_grave.png
+│           ├── 8yang_025_12_grave.png
+│           ├── 8yang_025_13a_grave.png
+│           ├── 8yang_025_13b_grave.png
+│           ├── 8yang_025_14_grave.png
+│           ├── 8yang_025_15a_ok.png
+│           ├── 8yang_025_15b_grave.png
+│           ├── 8yang_025_15c_grave.png
+│           ├── 8yang_025_16_grave.png
+│           ├── 8yang_025_17_ok.png
+│           ├── 8yang_025_18a_ok.png
+│           ├── 8yang_025_18b_grave.png
+│           ├── 8yang_025_19_grave.png
+│           ├── 8yang_025_1a_grave.png
+│           ├── 8yang_025_1b_grave.png
+│           ├── 8yang_025_20_ok.png
+│           ├── 8yang_025_21a_grave.png
+│           ├── 8yang_025_21b_grave.png
+│           ├── 8yang_025_22_grave.png
+│           ├── 8yang_025_23_grave.png
+│           ├── 8yang_025_24a_grave.png
+│           ├── 8yang_025_24b_ok.png
+│           ├── 8yang_025_2a_ok.png
+│           ├── 8yang_025_2b_ok.png
+│           ├── 8yang_025_2c_ok.png
+│           ├── 8yang_025_3_grave.png
+│           ├── 8yang_025_4_grave.png
+│           ├── 8yang_025_5_grave.png
+│           ├── 8yang_025_6_grave.png
+│           ├── 8yang_025_7_ok.png
+│           ├── 8yang_025_8a_grave.png
+│           ├── 8yang_025_8b_grave.png
+│           ├── 8yang_025_9a_ok.png
+│           ├── 8yang_025_9b_grave.png
+│           ├── 8yang_026_10_grave.png
+│           ├── 8yang_026_11a_ok.png
+│           ├── 8yang_026_11b_grave.png
+│           ├── 8yang_026_12_grave.png
+│           ├── 8yang_026_13a_grave.png
+│           ├── 8yang_026_13b_grave.png
+│           ├── 8yang_026_14_grave.png
+│           ├── 8yang_026_15a_ok.png
+│           ├── 8yang_026_15b_grave.png
+│           ├── 8yang_026_15c_ok.png
+│           ├── 8yang_026_16_grave.png
+│           ├── 8yang_026_17_grave.png
+│           ├── 8yang_026_18a_grave.png
+│           ├── 8yang_026_18b_grave.png
+│           ├── 8yang_026_19_grave.png
+│           ├── 8yang_026_1a_grave.png
+│           ├── 8yang_026_1b_grave.png
+│           ├── 8yang_026_20_ok.png
+│           ├── 8yang_026_21a_grave.png
+│           ├── 8yang_026_21b_grave.png
+│           ├── 8yang_026_22_ok.png
+│           ├── 8yang_026_23_grave.png
+│           ├── 8yang_026_24a_grave.png
+│           ├── 8yang_026_24b_grave.png
+│           ├── 8yang_026_2a_grave.png
+│           ├── 8yang_026_2b_ok.png
+│           ├── 8yang_026_2c_grave.png
+│           ├── 8yang_026_3_ok.png
+│           ├── 8yang_026_4_grave.png
+│           ├── 8yang_026_5_grave.png
+│           ├── 8yang_026_6_grave.png
+│           ├── 8yang_026_7_grave.png
+│           ├── 8yang_026_8a_grave.png
+│           ├── 8yang_026_8b_grave.png
+│           ├── 8yang_026_9a_grave.png
+│           ├── 8yang_026_9b_grave.png
+│           ├── 8yang_027_10_grave.png
+│           ├── 8yang_027_11a_ok.png
+│           ├── 8yang_027_11b_grave.png
+│           ├── 8yang_027_12_grave.png
+│           ├── 8yang_027_13a_ok.png
+│           ├── 8yang_027_13b_grave.png
+│           ├── 8yang_027_14_grave.png
+│           ├── 8yang_027_15a_grave.png
+│           ├── 8yang_027_15b_ok.png
+│           ├── 8yang_027_15c_ok.png
+│           ├── 8yang_027_16_grave.png
+│           ├── 8yang_027_17_grave.png
+│           ├── 8yang_027_18a_grave.png
+│           ├── 8yang_027_18b_grave.png
+│           ├── 8yang_027_19_ok.png
+│           ├── 8yang_027_1a_ok.png
+│           ├── 8yang_027_1b_grave.png
+│           ├── 8yang_027_20_grave.png
+│           ├── 8yang_027_21a_grave.png
+│           ├── 8yang_027_21b_grave.png
+│           ├── 8yang_027_22_grave.png
+│           ├── 8yang_027_23_ok.png
+│           ├── 8yang_027_24a_grave.png
+│           ├── 8yang_027_24b_grave.png
+│           ├── 8yang_027_2a_grave.png
+│           ├── 8yang_027_2b_grave.png
+│           ├── 8yang_027_2c_ok.png
+│           ├── 8yang_027_3_grave.png
+│           ├── 8yang_027_4_grave.png
+│           ├── 8yang_027_5_ok.png
+│           ├── 8yang_027_6_grave.png
+│           ├── 8yang_027_7_grave.png
+│           ├── 8yang_027_8a_grave.png
+│           ├── 8yang_027_8b_grave.png
+│           ├── 8yang_027_9a_grave.png
+│           └── 8yang_027_9b_grave.png
+├── previews
+│   ├── 8yang_001_preview.mp4
+│   ├── 8yang_001_review.mp4
+│   ├── 8yang_001_scored.mp4
+│   ├── 8yang_002_preview.mp4
+│   ├── 8yang_003_preview.mp4
+│   ├── 8yang_004_preview.mp4
+│   ├── 8yang_005_clip_preview.mp4
+│   ├── 8yang_005_preview.mp4
+│   ├── 8yang_006_preview.mp4
+│   ├── 8yang_007_preview.mp4
+│   ├── 8yang_008_preview.mp4
+│   ├── 8yang_009_preview.mp4
+│   ├── 8yang_010_preview.mp4
+│   ├── 8yang_011_preview.mp4
+│   ├── 8yang_012_preview.mp4
+│   ├── 8yang_013_preview.mp4
+│   ├── 8yang_014_preview.mp4
+│   ├── 8yang_015_preview.mp4
+│   ├── 8yang_016_preview.mp4
+│   ├── 8yang_017_preview.mp4
+│   ├── 8yang_018_preview.mp4
+│   ├── 8yang_019_preview.mp4
+│   ├── 8yang_020_preview.mp4
+│   ├── 8yang_021_preview.mp4
+│   ├── 8yang_022_preview.mp4
+│   ├── 8yang_023_preview.mp4
+│   ├── 8yang_024_preview.mp4
+│   ├── 8yang_025_preview.mp4
+│   ├── 8yang_026_preview.mp4
+│   ├── 8yang_027_preview.mp4
+│   ├── 8yang_028_preview.mp4
+│   └── 8yang_029_preview.mp4
+├── src
+│   ├── annot
+│   │   ├── labeler.py
+│   │   └── pre_segment.py
+│   ├── dataio
+│   │   ├── __init__.py
+│   │   ├── report_generator.py
+│   │   ├── video_downloader.py
+│   │   └── video_source.py
+│   ├── eval
+│   │   ├── patterns.py
+│   │   ├── pose_metrics.py
+│   │   └── stance_estimator.py
+│   ├── features
+│   │   ├── angles.py
+│   │   └── feature_extractor.py
+│   ├── model
+│   │   ├── dataset_builder.py
+│   │   ├── infer.py
+│   │   └── train.py
+│   ├── pose
+│   │   ├── base.py
+│   │   ├── csv_backend.py
+│   │   └── mediapipe_backend.py
+│   ├── preprocess
+│   │   └── bg_remove.py
+│   ├── rules
+│   │   └── deduction_rules.py
+│   ├── segmentation
+│   │   ├── __init__.py
+│   │   ├── move_capture.py
+│   │   └── segmenter.py
+│   ├── tools
+│   │   ├── __init__.py
+│   │   ├── aggregate_by_move.py
+│   │   ├── analyze_reports.py
+│   │   ├── batch_all.py
+│   │   ├── build_dataset.py
+│   │   ├── capture_moves.py
+│   │   ├── capture_moves_batch.py
+│   │   ├── collect_links.py
+│   │   ├── debug_segmentation.py
+│   │   ├── export_snapshots.py
+│   │   ├── extract_landmarks.py
+│   │   ├── score_pal_yang.py
+│   │   ├── simulate_scoring.py
+│   │   └── test_capture.py
+│   ├── utils
+│   │   ├── geometry.py
+│   │   ├── smoothing.py
+│   │   └── timing.py
+│   ├── __init__.py
+│   ├── config.py
+│   ├── main_offline.py
+│   ├── main_realtime.py
+│   └── video_get.py
+├── .env
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── run_capture_simple.py
+├── tree.txt
+└── tree_txt.py
+
+47 directorios, 1219 archivos

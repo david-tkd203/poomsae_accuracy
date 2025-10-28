@@ -1,0 +1,238 @@
+=== REPORTE DE SEGMENTACIÓN ===
+Video: 8yang_001
+FPS: 30.0
+Total frames: 2911
+Segmentos detectados: 23
+
+DETALLE DE SEGMENTOS:
+--------------------------------------------------------------------------------
+Segmento 1:
+  Frames: 225-233
+  Tiempo: 7.50-7.77s (duración: 0.27s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 1.372
+  Rotación: -9.3° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 2:
+  Frames: 1018-1039
+  Tiempo: 33.93-34.63s (duración: 0.70s)
+  Extremidad activa: R_ANK
+  Velocidad pico: 2.730
+  Rotación: -17.4° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: ap_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 3:
+  Frames: 1115-1123
+  Tiempo: 37.17-37.43s (duración: 0.27s)
+  Extremidad activa: L_WRIST
+  Velocidad pico: 0.970
+  Rotación: 24.7° (RIGHT_45)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: SE
+--------------------------------------------------------------------------------
+Segmento 4:
+  Frames: 1133-1141
+  Tiempo: 37.77-38.03s (duración: 0.27s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 1.091
+  Rotación: -12.2° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: none
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 5:
+  Frames: 1149-1168
+  Tiempo: 38.30-38.93s (duración: 0.63s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 1.127
+  Rotación: -16.3° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 6:
+  Frames: 1250-1258
+  Tiempo: 41.67-41.93s (duración: 0.27s)
+  Extremidad activa: R_WRIST
+  Velocidad pico: 1.379
+  Rotación: -6.4° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: N
+--------------------------------------------------------------------------------
+Segmento 7:
+  Frames: 1286-1309
+  Tiempo: 42.87-43.63s (duración: 0.77s)
+  Extremidad activa: R_ANK
+  Velocidad pico: 1.336
+  Rotación: -145.3° (LEFT_135)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 8:
+  Frames: 1345-1353
+  Tiempo: 44.83-45.10s (duración: 0.27s)
+  Extremidad activa: R_WRIST
+  Velocidad pico: 1.008
+  Rotación: -196.2° (TURN_180)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: NW
+--------------------------------------------------------------------------------
+Segmento 9:
+  Frames: 1550-1558
+  Tiempo: 51.67-51.93s (duración: 0.27s)
+  Extremidad activa: L_WRIST
+  Velocidad pico: 0.661
+  Rotación: 0.3° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: ap_chagi
+  Dirección brazo: E
+--------------------------------------------------------------------------------
+Segmento 10:
+  Frames: 1760-1768
+  Tiempo: 58.67-58.93s (duración: 0.27s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 0.187
+  Rotación: 6.0° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: none
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 11:
+  Frames: 1922-1930
+  Tiempo: 64.07-64.33s (duración: 0.27s)
+  Extremidad activa: R_ANK
+  Velocidad pico: 4.237
+  Rotación: 161.8° (TURN_180)
+  Postura: moa_seogi
+  Patada: none
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 12:
+  Frames: 1954-1971
+  Tiempo: 65.13-65.70s (duración: 0.57s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 4.959
+  Rotación: -98.2° (LEFT_90)
+  Postura: moa_seogi
+  Patada: ap_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 13:
+  Frames: 1979-1987
+  Tiempo: 65.97-66.23s (duración: 0.27s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 2.191
+  Rotación: 14.5° (STRAIGHT)
+  Postura: ap_kubi
+  Patada: ap_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 14:
+  Frames: 2064-2072
+  Tiempo: 68.80-69.07s (duración: 0.27s)
+  Extremidad activa: R_WRIST
+  Velocidad pico: 3.251
+  Rotación: 15.2° (STRAIGHT)
+  Postura: ap_kubi
+  Patada: ap_chagi
+  Dirección brazo: S
+--------------------------------------------------------------------------------
+Segmento 15:
+  Frames: 2231-2239
+  Tiempo: 74.37-74.63s (duración: 0.27s)
+  Extremidad activa: L_WRIST
+  Velocidad pico: 3.692
+  Rotación: 8.1° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: ap_chagi
+  Dirección brazo: W
+--------------------------------------------------------------------------------
+Segmento 16:
+  Frames: 2266-2285
+  Tiempo: 75.53-76.17s (duración: 0.63s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 2.073
+  Rotación: 5.5° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: ap_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 17:
+  Frames: 2321-2329
+  Tiempo: 77.37-77.63s (duración: 0.27s)
+  Extremidad activa: L_WRIST
+  Velocidad pico: 0.994
+  Rotación: -11.3° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: SW
+--------------------------------------------------------------------------------
+Segmento 18:
+  Frames: 2378-2386
+  Tiempo: 79.27-79.53s (duración: 0.27s)
+  Extremidad activa: R_WRIST
+  Velocidad pico: 1.335
+  Rotación: 19.1° (STRAIGHT)
+  Postura: moa_seogi
+  Patada: arae_chagi
+  Dirección brazo: SW
+--------------------------------------------------------------------------------
+Segmento 19:
+  Frames: 2435-2443
+  Tiempo: 81.17-81.43s (duración: 0.27s)
+  Extremidad activa: L_WRIST
+  Velocidad pico: 3.338
+  Rotación: -11.4° (STRAIGHT)
+  Postura: ap_kubi
+  Patada: arae_chagi
+  Dirección brazo: S
+--------------------------------------------------------------------------------
+Segmento 20:
+  Frames: 2459-2467
+  Tiempo: 81.97-82.23s (duración: 0.27s)
+  Extremidad activa: R_WRIST
+  Velocidad pico: 0.140
+  Rotación: -1.2° (STRAIGHT)
+  Postura: ap_kubi
+  Patada: arae_chagi
+  Dirección brazo: SE
+--------------------------------------------------------------------------------
+Segmento 21:
+  Frames: 2738-2746
+  Tiempo: 91.27-91.53s (duración: 0.27s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 5.952
+  Rotación: -84.3° (LEFT_90)
+  Postura: moa_seogi
+  Patada: none
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 22:
+  Frames: 2758-2769
+  Tiempo: 91.93-92.30s (duración: 0.37s)
+  Extremidad activa: L_ANK
+  Velocidad pico: 4.318
+  Rotación: 277.4° (LEFT_90)
+  Postura: ap_kubi
+  Patada: ap_chagi
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------
+Segmento 23:
+  Frames: 2786-2805
+  Tiempo: 92.87-93.50s (duración: 0.63s)
+  Extremidad activa: R_ANK
+  Velocidad pico: 3.510
+  Rotación: 333.3° (LEFT_45)
+  Postura: moa_seogi
+  Patada: none
+  Dirección brazo: NONE
+--------------------------------------------------------------------------------

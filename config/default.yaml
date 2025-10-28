@@ -1,28 +1,45 @@
+# config/default.yaml
 general:
   fps: 30
-  model_path: "./data/models/rf_t7jang.joblib"
+  model_path: "./data/models/rf_8yang.joblib"
+  poomsae_spec: "./config/patterns/8yang_spec.json"
+  pose_spec: "./config/patterns/pose_spec.json"
 
 segmentation:
-  # umbrales de segmentación por actividad (ajustables por dataset)
   speed_thresh_deg_s: 45.0
-  min_segment_frames: 10
-  max_pause_frames: 8
+  min_segment_frames: 8
+  max_pause_frames: 6
+  expected_movements: 24
+  min_duration: 0.2
+  max_duration: 2.0
+  sensitivity: 0.9
 
 features:
-  smoothing_window: 5       # Savitzky–Golay o media móvil
-  angle_triplets:           # índices de landmarks (ej. formato mediapipe)
-    elbow_left:   [11,13,15]    # hombro- codo- muñeca
-    elbow_right:  [12,14,16]
-    knee_left:    [23,25,27]
-    knee_right:   [24,26,28]
-    hip_left:     [11,23,25]
-    hip_right:    [12,24,26]
-    shoulder:     [11,12,24]    # alineación tronco aprox.
+  smoothing_window: 3
+  angle_triplets:
+    elbow_left: [11,13,15]
+    elbow_right: [12,14,16]
+    knee_left: [23,25,27]
+    knee_right: [24,26,28]
+    hip_left: [11,23,25]
+    hip_right: [12,24,26]
+    shoulder: [11,12,24]
   stat_funcs: ["mean","std","p10","p50","p90","range","max_speed","max_acc"]
 
 rules:
-  # regla base por umbrales físicos para leve/grave (complementada por ML)
-  knee_depth_min_deg: 50      # flexión mínima para “posturas profundas”
-  elbow_straight_max_deg: 15  # tolerancia para brazo extendido
-  trunk_tilt_max_deg: 20      # inclinación lateral permitida
-  jitter_max_deg_s2: 800      # suavidad
+  knee_depth_min_deg: 120
+  elbow_straight_max_deg: 15
+  trunk_tilt_max_deg: 20
+  jitter_max_deg_s2: 800
+
+scoring:
+  weights:
+    stance: 0.25
+    turn: 0.20
+    category: 0.10
+    active_limb: 0.10
+    kick_type: 0.15
+    timing: 0.20
+  timing_tolerance_s: 0.35
+  deduction_mild: -0.1
+  deduction_grave: -0.3

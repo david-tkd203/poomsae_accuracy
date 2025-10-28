@@ -1,0 +1,17 @@
+{
+  "total_movements": 23,
+  "duration_avg": 0.37246376811594195,
+  "duration_std": 0.17240895487493393,
+  "duration_min": 0.26666666666666666,
+  "duration_max": 0.7666666666666667,
+  "speed_avg": 2.2544744584871377,
+  "speed_std": 1.5768643481967606,
+  "speed_min": 0.13954484462738037,
+  "speed_max": 5.951894760131836,
+  "limb_distribution": {
+    "L_ANK": 9,
+    "R_ANK": 4,
+    "L_WRIST": 5,
+    "R_WRIST": 5
+  }
+}
