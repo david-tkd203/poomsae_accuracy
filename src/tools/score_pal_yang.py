@@ -30,6 +30,7 @@ def load_spec(path: Path) -> Dict:
     return data
 
 def load_pose_spec(path: Optional[Path]) -> Dict:
+    # Defaults; se pueden sobreescribir con --pose-spec
     cfg = {
         "schema": "v1.1",
         "tolerances": {"turn_deg_tol": 30.0, "arm_octant_tol": 1, "dtw_good": 0.25},
@@ -298,6 +299,10 @@ def _kick_required(tech_kor: str, tech_es: str) -> bool:
     return ("chagi" in s) or ("patada" in s)
 
 def _kick_metrics(df: pd.DataFrame, a: int, b: int) -> Tuple[float,float]:
+    """
+    (amplitud, pico por encima de cadera) en coords normalizadas.
+    Robusto a Series/DataFrame de pandas en groupby.
+    """
     sub = df[(df["frame"]>=a) & (df["frame"]<=b)]
     if sub.empty:
         return 0.0, 0.0
@@ -586,34 +591,38 @@ def score_one_video(
                 "stance(exp)": stance_exp, "stance(meas)": "—", "ankle_dist_sw": np.nan, "rear_foot_turn_deg": np.nan, "rear_foot_turn_ok": "—",
                 "kick_req": "—", "kick_amp": np.nan, "kick_peak": np.nan, "kick_type_pred": "—",
                 "kick_plantar_deg": np.nan, "kick_plantar_ok": "—", "kick_gaze_deg": np.nan, "kick_gaze_ok": "—",
-                "t0": np.nan, "t1": np.nan, "t_pose": np.nan, "dur_s": np.nan
+                "t0": np.nan, "t1": np.nan, "pose_f": np.nan, "pose_t": np.nan, "dur_s": np.nan
             })
             continue
 
-        # Preferir índices de frame absolutos si el JSON los trae (a/b/pose_f)
+        # Compatibilidad: si el JSON trajera a/b (índices), preferirlos
         if "a" in s and "b" in s:
             a = int(s["a"]); b = int(s["b"])
-            # corregir si invertidos
             if b < a: a, b = b, a
         else:
-            t0 = float(s["t_start"]); t1 = float(s["t_end"])
-            a  = _sec_to_csv_frame(t0); b  = _sec_to_csv_frame(t1)
+            t0 = float(s.get("t_start", 0.0)); t1 = float(s.get("t_end", 0.0))
+            a  = _sec_to_csv_frame(t0);        b  = _sec_to_csv_frame(t1)
             if b < a: a, b = b, a
 
         if b - a < 2:
             b = min(nframes_csv - 1, a + 2)
 
-        # Frame “posición” (quietud + nivel objetivo)
+        # Frame “posición” (quietud + objetivo de nivel)
         if "pose_f" in s:
             pose_f = int(s["pose_f"])
-            if pose_f < a or pose_f > b:
+            if not (a <= pose_f <= b):
                 pose_f = _pose_frame_for_segment(df, a, b, level_exp, lvl_cfg)
         else:
             pose_f = _pose_frame_for_segment(df, a, b, level_exp, lvl_cfg)
 
-        # Tiempos consistentes con el CSV estimado (30/60fps, etc.)
+        # Ventana corta alrededor de pose_f para medir (reduce desfases)
+        aa = max(a, pose_f - 2)
+        bb = min(b, pose_f + 2)
+
+        # Tiempos consistentes con CSV
         t0_time = a / float(fps_csv_est)
         t1_time = b / float(fps_csv_est)
+        tpose_time = pose_f / float(fps_csv_est)
 
         cat = _tech_category(tech_kor, tech_es)
 
@@ -623,19 +632,23 @@ def score_one_video(
 
         limb = str(s.get("active_limb",""))
         wrist_id = 15 if limb == "L_WRIST" else 16
-        rel = _wrist_rel_series_robust(df, a, b, wrist_id)
-        y_rel_end = float(rel[-1]) if rel.size else float("nan")
+        # Nivel: mediana en [aa,bb]
+        rel = _wrist_rel_series_robust(df, aa, bb, wrist_id)
+        y_rel_end = float(np.nanmedian(rel)) if rel.size else float("nan")
         level_meas = _level_from_spec_thresholds(y_rel_end, lvl_cfg)
         cls_lvl = _classify_level(level_meas, level_exp)
 
+        # Dirección (se evalúa con la polilínea reportada por el capturador)
         if limb in ("L_WRIST","R_WRIST") and dir_exp:
             cls_dir = _classify_dir(s.get("path", []), dir_exp, oct_slack, dtw_thr)
         else:
             cls_dir = "SKIP"
 
-        med_elbow = _median_elbow_extension(df, a, b)
+        # Extensión codo en [aa,bb]
+        med_elbow = _median_elbow_extension(df, aa, bb)
         cls_ext = _classify_extension(med_elbow)
 
+        # Composición brazos por categoría
         if cat == "BLOCK":
             subs = [cls_lvl, cls_rot]
             if cls_dir != "SKIP": subs.append(cls_dir)
@@ -651,18 +664,20 @@ def score_one_video(
         else:
             comp_arms = max([cls_lvl, cls_rot], key=_severity_to_int)
 
-        meas_lab, feats = _stance_plus(df, a, b)
+        # Piernas en [aa,bb]
+        meas_lab, feats = _stance_plus(df, aa, bb)
         rear_turn = _rear_foot_turn_deg(feats, front_side=lead)
-        ankle_sw  = feats.get("ankle_dist_sw", _ankle_dist_sw(df,a,b))
+        ankle_sw  = feats.get("ankle_dist_sw", _ankle_dist_sw(df, aa, bb))
         comp_legs, legs_reason = _classify_stance_2024(meas_lab, stance_exp, ankle_sw, rear_turn, cfg)
 
+        # Patada en [aa,bb]
         req_kick = _kick_required(tech_kor, tech_es)
         kick_type_pred = str(s.get("kick_pred",""))
         if req_kick:
-            amp, peak = _kick_metrics(df, a, b)
-            kside = _kicking_side(df, a, b) or lead
-            plantar_deg = _plantar_angle_deg(df, a, b, kside)
-            gaze_deg    = _gaze_to_toe_deg(df, a, b, kside)
+            amp, peak = _kick_metrics(df, aa, bb)
+            kside = _kicking_side(df, aa, bb) or lead
+            plantar_deg = _plantar_angle_deg(df, aa, bb, kside)
+            gaze_deg    = _gaze_to_toe_deg(df, aa, bb, kside)
             comp_kick, kick_reason = _classify_kick_2024(
                 amp, peak, ap_thr, peak_thr,
                 kick_type_pred, "ap_chagi",
@@ -723,9 +738,9 @@ def score_one_video(
             "kick_gaze_deg": round(float(gaze_deg),1) if isinstance(gaze_deg,(int,float)) else np.nan,
             "kick_gaze_ok": "yes" if (isinstance(gaze_deg,(int,float)) and gaze_deg <= gaze_thr) else ("—" if not req_kick else "no"),
 
-            # tiempos coherentes con el CSV (mejor para 60fps)
+            # tiempos coherentes con el CSV + postura anclada
             "t0": round(float(t0_time),3), "t1": round(float(t1_time),3),
-            "t_pose": round(float(pose_f/float(fps_csv_est)),3),
+            "pose_f": int(pose_f), "pose_t": round(float(tpose_time),3),
             "dur_s": round(float((b-a)/float(fps_csv_est)),3)
         })
 
@@ -801,7 +816,7 @@ def score_many_to_excel(
             "rot(exp)","rot(meas_deg)","dir(exp_oct)","dir_used","elbow_median_deg",
             "stance(exp)","stance(meas)","ankle_dist_sw","rear_foot_turn_deg","rear_foot_turn_ok",
             "kick_req","kick_amp","kick_peak","kick_type_pred","kick_plantar_deg","kick_plantar_ok","kick_gaze_deg","kick_gaze_ok",
-            "t0","t1","t_pose","dur_s"
+            "t0","t1","pose_f","pose_t","dur_s"
         ])).to_excel(xw, index=False, sheet_name="detalle")
         (df_sum if not df_sum.empty else pd.DataFrame(columns=[
             "video_id","moves_expected","moves_detected","moves_scored","moves_correct_90p",

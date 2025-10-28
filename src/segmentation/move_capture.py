@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 import cv2
 
-# Mapeo indices MediaPipe Pose
+# ---------------- índices MediaPipe Pose ----------------
+
 LMK = dict(
     NOSE=0,
     L_EYE_IN=1, L_EYE=2, L_EYE_OUT=3, R_EYE_IN=4, R_EYE=5, R_EYE_OUT=6,
@@ -21,7 +22,6 @@ LMK = dict(
     L_HEEL=29, R_HEEL=30, L_FOOT=31, R_FOOT=32
 )
 
-# Conexiones para dibujar esqueleto (subset habitual)
 CONNECTIONS = [
     (LMK["L_SH"],LMK["R_SH"]), (LMK["L_SH"],LMK["L_HIP"]), (LMK["R_SH"],LMK["R_HIP"]), (LMK["L_HIP"],LMK["R_HIP"]),
     (LMK["L_SH"],LMK["L_ELB"]), (LMK["L_ELB"],LMK["L_WRIST"]),
@@ -112,7 +112,7 @@ def series_xy(df: pd.DataFrame, lmk_id: int, nframes: int) -> np.ndarray:
             arr[:,k] = v
     return arr
 
-# ---------------- helpers de heading/energía ----------------
+# ---------------- heading / energía ----------------
 
 def _heading_series_deg(lsh: np.ndarray, rsh: np.ndarray) -> np.ndarray:
     sh_vec = rsh - lsh
@@ -131,53 +131,65 @@ def _energy_series(eff_xy: Dict[str,np.ndarray], fps: float, smooth_win: int) ->
 
 # ---------------- segmentación ----------------
 
-def detect_segments_from_speed(speeds: np.ndarray, fps: float,
-                               vstart: float, vstop: float,
-                               min_dur: float, min_gap: float) -> List[Tuple[int,int]]:
-    """
-    Segmentación por histéresis: entra con s>=vstart, sale con s<=vstop.
-    Fusiona huecos cortos y descarta segmentos breves.
-    """
+def detect_segments_from_speed(speeds, fps, vstart, vstop, min_dur, min_gap,
+                               backtrack=9, edge_slack=3):
     smax = np.nanmax(speeds, axis=1)
     n = len(smax)
-    on = False
-    segs: List[Tuple[int,int]] = []
-    a = -1
+    on = False; segs = []; a = -1
     for i in range(n):
         if not on:
             if smax[i] >= vstart:
-                on = True; a = i
+                a = _backtrack_onset(smax, i, vstop*0.9, backtrack)
+                on = True
         else:
             if smax[i] <= vstop:
+                # cierre conservador
                 b = i
-                while b > a and smax[b] <= vstop: b -= 1
                 segs.append((a, max(a, b)))
                 on = False; a = -1
     if on and a >= 0:
         segs.append((a, n-1))
-
+    # filtros
     frames_min = int(round(min_dur * fps))
     frames_gap = int(round(min_gap * fps))
-
     segs = [(x,y) for (x,y) in segs if (y - x + 1) >= frames_min]
     if not segs: return []
-    merged: List[Tuple[int,int]] = [segs[0]]
+    merged = [segs[0]]
     for (x,y) in segs[1:]:
-        (px,py) = merged[-1]
+        px,py = merged[-1]
         if (x - py - 1) <= frames_gap:
             merged[-1] = (px, y)
         else:
             merged.append((x,y))
+    # slack de bordes
+    merged = [_refine_with_slack(smax, a, b, edge_slack) for (a,b) in merged]
     return merged
 
-def _refine_edges(smax: np.ndarray, a: int, b: int, vstop: float) -> Tuple[int,int]:
-    i = a
-    while i > 0 and smax[i] > vstop: i -= 1
-    a2 = i
-    j = b
-    while j < len(smax)-1 and smax[j] > vstop: j += 1
-    b2 = j
-    if a2 >= b2: return a, b
+def _refine_edges_minima(smax: np.ndarray, a: int, b: int, vstop: float) -> Tuple[int,int]:
+    """
+    Expande a mínimos locales alrededor de a y b:
+    busca el último cruce por debajo de vstop y cae a mínimos cercanos
+    para anclar inicio/fin en calma real. Incluye un pequeño pre-roll.
+    """
+    n = len(smax)
+
+    # izquierda
+    i = max(0, a)
+    while i > 1 and smax[i] > vstop:
+        i -= 1
+    left_win = slice(max(0, i - 3), min(n, i + 4))
+    a2 = int(np.nanargmin(smax[left_win])) + left_win.start
+    a2 = max(0, a2 - 2)  # pre-roll
+
+    # derecha
+    j = min(n - 1, b)
+    while j < n - 2 and smax[j] > vstop:
+        j += 1
+    right_win = slice(max(0, j - 3), min(n, j + 4))
+    b2 = int(np.nanargmin(smax[right_win])) + right_win.start
+
+    if a2 >= b2:
+        return a, b
     return a2, b2
 
 def _quantile_cut_segments(sp: np.ndarray, expected_n: int, min_frames: int) -> List[Tuple[int,int]]:
@@ -200,6 +212,7 @@ def _quantile_cut_segments(sp: np.ndarray, expected_n: int, min_frames: int) -> 
         if k < expected_n-1 and b >= cuts[k+1]:
             b = max(a, cuts[k+1]-1)
         segs.append((a, b))
+    # separa límites solapados
     for k in range(1, len(segs)):
         prev_a, prev_b = segs[k-1]
         a, b = segs[k]
@@ -212,15 +225,6 @@ def _quantile_cut_segments(sp: np.ndarray, expected_n: int, min_frames: int) -> 
         segs.append((segs[-1][1], min(T-1, segs[-1][1])))
     return segs[:expected_n]
 
-def _disp(xy: np.ndarray) -> float:
-    if len(xy) < 2: return 0.0
-    d = np.sqrt(np.sum(np.diff(xy, axis=0)**2, axis=1))
-    return float(np.nansum(d))
-
-def _choose_active_limb(eff_xy: Dict[str,np.ndarray], a: int, b: int) -> str:
-    cand = {k: eff_xy[k][a:b+1] for k in END_EFFECTORS}
-    return max(cand.items(), key=lambda kv: _disp(kv[1]))[0]
-
 def resample_polyline(xy: np.ndarray, n: int) -> np.ndarray:
     if len(xy) == 0: return np.zeros((0,2), np.float32)
     if len(xy) == 1: return np.tile(xy[:1], (n,1))
@@ -232,7 +236,30 @@ def resample_polyline(xy: np.ndarray, n: int) -> np.ndarray:
     xs = np.interp(t, s, xy[:,0]); ys = np.interp(t, s, xy[:,1])
     return np.stack([xs, ys], axis=1)
 
-# ---------------- clasificación de postura/patada ----------------
+def _choose_active_limb(eff_xy: Dict[str,np.ndarray], a: int, b: int) -> str:
+    def _disp(xy: np.ndarray) -> float:
+        if len(xy) < 2: return 0.0
+        d = np.sqrt(np.sum(np.diff(xy, axis=0)**2, axis=1))
+        return float(np.nansum(d))
+    cand = {k: eff_xy[k][a:b+1] for k in END_EFFECTORS}
+    return max(cand.items(), key=lambda kv: _disp(kv[1]))[0]
+
+def _choose_pose_frame(smax: np.ndarray, a: int, b: int) -> int:
+    """
+    Selecciona un frame estable hacia el final del segmento:
+    toma el 60%→fin y elige el de menor energía (quietud relativa).
+    """
+    if b <= a:
+        return a
+    lo = a + int(0.6 * (b - a))
+    lo = min(max(lo, a), b)
+    sub = smax[lo:b+1]
+    if sub.size == 0 or not np.isfinite(sub).any():
+        return b
+    off = int(np.nanargmin(sub))
+    return lo + off
+
+# ---------------- clasificación simple (ligera) ----------------
 
 def classify_stance_frame(lmk: Dict[str,np.ndarray]) -> str:
     LANK, RANK = lmk["L_ANK"], lmk["R_ANK"]
@@ -272,6 +299,8 @@ def arm_motion_direction(wrist_xy: np.ndarray) -> str:
 @dataclass
 class MoveSegment:
     idx: int
+    a: int                 # frame inicio (CSV)
+    b: int                 # frame fin (CSV)
     t_start: float
     t_end: float
     duration: float
@@ -280,14 +309,13 @@ class MoveSegment:
     rotation_deg: float
     rotation_bucket: str
     height_end: float
-    path: List[Tuple[float, float]]  # [0..1]
+    path: List[Tuple[float, float]]
     stance_pred: str
     kick_pred: str
     arm_dir: str
-    # NUEVO: indices de frame absolutos en la cronología del video/CSV
-    a: int
-    b: int
-    pose_f: int  # frame “posición” (quietud) dentro del segmento
+    # NUEVO: frame/t de “posición” (quietud hacia el final)
+    pose_f: int
+    pose_t: float
 
 @dataclass
 class CaptureResult:
@@ -303,6 +331,68 @@ class CaptureResult:
             "moves": [asdict(m) for m in self.moves]
         }, ensure_ascii=False, indent=2)
 
+
+
+# --- NUEVO: energía de tronco y helper de rotación ---
+def _trunk_energy(lsh, rsh, lhip, rhip, fps, smooth_win):
+    sh = movavg(0.5*(lsh + rsh), smooth_win)
+    hp = movavg(0.5*(lhip + rhip), smooth_win)
+    v_sh = np.linalg.norm(central_diff(sh, fps), axis=1)
+    v_hp = np.linalg.norm(central_diff(hp, fps), axis=1)
+    # heading vel (velocidad angular del vector hombros)
+    sh_vec = rsh - lsh
+    ang = np.degrees(np.arctan2(sh_vec[:,1], sh_vec[:,0]))
+    ang = unwrap_deg(ang)
+    vang = np.abs(central_diff(ang.reshape(-1,1), fps)[:,0]) / 180.0  # normaliza (0..~1)
+    return v_sh, v_hp, vang
+
+def _energy_series_plus(eff_xy: Dict[str,np.ndarray], lsh, rsh, lhip, rhip, fps: float, smooth_win: int):
+    speeds = []
+    for name in END_EFFECTORS:
+        xy = movavg(eff_xy[name], smooth_win)
+        v = np.linalg.norm(central_diff(xy, fps), axis=1)
+        speeds.append(v)
+    v_sh, v_hp, vang = _trunk_energy(lsh, rsh, lhip, rhip, fps, smooth_win)
+    speeds = np.stack(speeds + [v_sh, v_hp, vang], axis=1)  # (T, 7)
+    # energía global: max(effectors) + 0.5*max(tronco)
+    sp_eff = np.nanmax(speeds[:, :4], axis=1)
+    sp_trk = np.nanmax(speeds[:, 4:], axis=1)
+    sp = sp_eff + 0.5*sp_trk
+    return speeds, sp
+
+# --- NUEVO: umbrales por cuantiles (con flag) ---
+def _make_thresholds(sp, vstart, vstop, use_quantiles=True):
+    sp = np.asarray(sp)
+    if use_quantiles:
+        q75 = float(np.nanpercentile(sp, 75))
+        q40 = float(np.nanpercentile(sp, 40))
+        return max(vstart, q75), max(vstop, q40*0.9)
+    # fallback med+MAD
+    med = float(np.nanmedian(sp))
+    mad = float(np.nanmedian(np.abs(sp - med)) + 1e-6)
+    return max(vstart, med + 2.0*mad), max(vstop, med + 1.0*mad)
+
+# --- NUEVO: backtracking de inicio + slack de bordes ---
+def _backtrack_onset(sp, hit_idx, vstop_floor, lookback_frames=9):
+    j = hit_idx
+    lo = max(0, j - lookback_frames)
+    # buscar el último cruce por debajo del piso
+    k = j
+    while k > lo and sp[k] > vstop_floor:
+        k -= 1
+    # cae al mínimo local cercano
+    win = slice(max(0, k-3), min(len(sp), k+4))
+    return int(np.nanargmin(sp[win]) + win.start)
+
+def _refine_with_slack(sp, a, b, edge_slack=3):
+    a2 = max(0, a - edge_slack)
+    b2 = min(len(sp)-1, b + edge_slack)
+    # mínimos locales en vecindad
+    wA = slice(max(0, a2-3), min(len(sp), a2+4))
+    wB = slice(max(0, b2-3), min(len(sp), b2+4))
+    a3 = int(np.nanargmin(sp[wA]) + wA.start)
+    b3 = int(np.nanargmin(sp[wB]) + wB.start)
+    return (a3 if a3 < b3 else a2), (b3 if b3 > a3 else b2)
 # ---------------- núcleo ----------------
 
 def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
@@ -321,6 +411,7 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
         nframes = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or nframes)
         cap.release()
 
+    # series
     lsh = series_xy(df, LMK["L_SH"], nframes)
     rsh = series_xy(df, LMK["R_SH"], nframes)
     lhip = series_xy(df, LMK["L_HIP"], nframes)
@@ -334,46 +425,48 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
 
     heading = _heading_series_deg(lsh, rsh)
 
-    eff_xy: Dict[str,np.ndarray] = {
-        "L_WRIST": lwri, "R_WRIST": rwri, "L_ANK": lank, "R_ANK": rank
-    }
+    eff_xy = {"L_WRIST": lwri, "R_WRIST": rwri, "L_ANK": lank, "R_ANK": rank}
+    speeds, sp = _energy_series_plus(eff_xy, lsh, rsh, lhip, rhip, fps, smooth_win)
 
     speeds, sp = _energy_series(eff_xy, fps, smooth_win)
-
-    # Umbrales adaptativos
+    smax = np.nanmax(speeds, axis=1)
+    vstart_adapt, vstop_adapt = _make_thresholds(sp, vstart, vstop, use_quantiles=True)
+    # Umbrales adaptativos robustos (mediana + MAD)
     med = np.nanmedian(sp)
     mad = np.nanmedian(np.abs(sp - med)) + 1e-6
     vstart_adapt = max(vstart, med + 2.0*mad)
     vstop_adapt  = max(vstop,  med + 1.0*mad)
 
+    # Segmentación base
     segs = detect_segments_from_speed(speeds, fps, vstart_adapt, vstop_adapt, min_dur, min_gap)
-    smax = np.nanmax(speeds, axis=1)
-    segs = [_refine_edges(smax, a, b, vstop_adapt) for (a,b) in segs]
+    # Anclar a mínimos
+    segs = [_refine_edges_minima(smax, a, b, vstop_adapt) for (a,b) in segs]
 
-    # Forzar N esperado (p.ej., 24 en Pal Jang) usando cortes por cuantiles de energía
+    segs = detect_segments_from_speed(
+        speeds, fps, vstart_adapt, vstop_adapt, min_dur, min_gap,
+        backtrack= int(round(0.30*fps)),   # ~0.3 s hacia atrás
+        edge_slack= int(round(0.10*fps))   # ~0.1 s de margen
+    )
+
+    # Forzar N esperado (opcional)
     if isinstance(expected_n, int) and expected_n > 0 and len(segs) != expected_n:
         frames_min = int(round(min_dur * fps))
         segs = _quantile_cut_segments(sp, expected_n, frames_min)
-
-    # Helper: frame de “posición” por quietud del efector activo
-    def _pose_frame_quiet(eff_name: str, a: int, b: int) -> int:
-        if a >= b: return a
-        v = np.linalg.norm(central_diff(movavg(eff_xy[eff_name][a:b+1], smooth_win), fps), axis=1)
-        i0 = int(0.6 * len(v))
-        i0 = min(max(0, i0), len(v)-1)
-        seg = v[i0:] if len(v) else np.array([0.0], np.float32)
-        k = int(np.nanargmin(seg)) if np.isfinite(seg).any() else 0
-        return a + i0 + k
+        segs = [_refine_with_slack(sp, a, b, int(round(0.10*fps))) for (a,b) in segs]
 
     moves: List[MoveSegment] = []
     for i,(a,b) in enumerate(segs, start=1):
         limb = _choose_active_limb(eff_xy, a, b)
+
+        # pico de velocidad por efector en el segmento
         seg_sp_col = {
             k: np.linalg.norm(central_diff(movavg(eff_xy[k][a:b+1], smooth_win), fps), axis=1) for k in END_EFFECTORS
         }
         v_peak = float(max(np.nanmax(v) if len(v) else 0.0 for v in seg_sp_col.values()))
 
         path_xy = eff_xy[limb][a:b+1, :]
+
+        # Si no se fuerza N, descarta segmentos de trayectoria demasiado corta
         if not (isinstance(expected_n, int) and expected_n > 0):
             if len(path_xy) >= 2:
                 path_len = float(np.sum(np.linalg.norm(np.diff(path_xy, axis=0), axis=1)))
@@ -382,13 +475,16 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
             if path_len < min_path_norm:
                 continue
 
+        # giro medido (hombros)
         h0 = float(heading[a]); h1 = float(heading[b])
         dhead = ((h1 - h0 + 180) % 360) - 180
         bucket = bucket_turn(dhead)
 
+        # polilínea de trayectoria
         poly = resample_polyline(path_xy, poly_n)
         y_end = float(path_xy[-1, 1]) if len(path_xy) else float('nan')
 
+        # postura mayoritaria (voto por frame)
         stance_votes = []
         for f in range(a, b+1):
             lmk = {
@@ -397,39 +493,42 @@ def capture_moves_from_csv(csv_path: Path, *, video_path: Optional[Path],
                 "L_HIP": lhip[f], "R_HIP": rhip[f]
             }
             stance_votes.append(classify_stance_frame(lmk))
-        if stance_votes:
-            st = max(set(stance_votes), key=stance_votes.count)
-            if st == "unknown":
-                fd = float(np.linalg.norm(lank[a]-rank[a]))
-                st = "ap_kubi" if fd>0.10 else ("beom_seogi" if fd<0.07 else "dwit_kubi")
-        else:
-            st = "unknown"
+        st = max(set(stance_votes), key=stance_votes.count) if stance_votes else "unknown"
+        if st == "unknown":
+            fd = float(np.linalg.norm(lank[a]-rank[a]))
+            st = "ap_kubi" if fd>0.10 else ("beom_seogi" if fd<0.07 else "dwit_kubi")
 
+        # tipo de patada (si el efector activo es tobillo)
         hip_seg = 0.5*(lhip[a:b+1,:] + rhip[a:b+1,:])
         kick = "none"
         if limb in ("L_ANK","R_ANK") and len(path_xy) >= 2:
             kick = detect_kick_type(path_xy, hip_seg)
+
+        # octante de brazo (si efector activo es muñeca)
         a_dir = "NONE"
         if limb in ("L_WRIST","R_WRIST") and len(path_xy) >= 2:
             a_dir = arm_motion_direction(path_xy)
 
-        pose_f = _pose_frame_quiet(limb, a, b)
+        # frame/t de “posición” (quietud hacia el final)
+        pose_f = _choose_pose_frame(smax, a, b)
+        pose_t = pose_f / fps
 
         moves.append(MoveSegment(
-            idx=i, t_start=a/fps, t_end=b/fps, duration=max(1,(b-a+1))/fps,
+            idx=i, a=a, b=b,
+            t_start=a/fps, t_end=b/fps, duration=max(1,(b-a+1))/fps,
             active_limb=limb, speed_peak=v_peak,
             rotation_deg=float(dhead), rotation_bucket=bucket,
             height_end=y_end, path=[(float(x), float(y)) for x,y in poly],
             stance_pred=st, kick_pred=kick, arm_dir=a_dir,
-            a=int(a), b=int(b), pose_f=int(pose_f)
+            pose_f=int(pose_f), pose_t=float(pose_t)
         ))
 
     return CaptureResult(video_id=Path(csv_path).stem, fps=fps, nframes=nframes, moves=moves)
 
-# ---------------- helpers para preview ----------------
+# ---------------- preview con overlay ----------------
 
 def _draw_pose_from_csv_frame(frame: np.ndarray, csv_df: pd.DataFrame, fidx: int):
-    """Dibuja esqueleto en 'frame' usando el CSV del frame 'fidx' (soporta x,y normalizados o en pixeles)."""
+    """Dibuja esqueleto en 'frame' con el CSV del frame 'fidx'."""
     h, w = frame.shape[:2]
     rows = csv_df[csv_df["frame"] == fidx]
     if rows.empty:
@@ -478,10 +577,12 @@ def render_preview(video_path: Path, result: CaptureResult, out_path: Path,
     out = cv2.VideoWriter(str(out_path), fourcc, fps, (W,H))
 
     per_frame: Dict[int,List[MoveSegment]] = {}
+    pose_frames: Dict[int,bool] = {}
     for m in result.moves:
         a = int(m.a); b = int(m.b)
         for f in range(a, b+1):
             per_frame.setdefault(f, []).append(m)
+        pose_frames[int(m.pose_f)] = True
 
     csv_df = None
     if draw_pose and csv_path and Path(csv_path).exists():
@@ -495,22 +596,32 @@ def render_preview(video_path: Path, result: CaptureResult, out_path: Path,
         if csv_df is not None:
             _draw_pose_from_csv_frame(frame, csv_df, fidx)
 
-        segs = per_frame.get(fidx, [])
+        # marca temporal
         y0 = 26
         cv2.putText(frame, f"t={fidx/fps:6.2f}s", (12,y0), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,0), 3, cv2.LINE_AA)
         cv2.putText(frame, f"t={fidx/fps:6.2f}s", (12,y0), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,255), 2, cv2.LINE_AA)
+
+        # segmentos activos
+        segs = per_frame.get(fidx, [])
         y = y0 + 24
         for m in segs[:3]:
             txt = f"#{m.idx} {m.active_limb} {m.rotation_bucket} {m.stance_pred} {m.kick_pred}"
             cv2.putText(frame, txt, (12,y), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0,0,0), 3, cv2.LINE_AA)
             cv2.putText(frame, txt, (12,y), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255,255,0), 2, cv2.LINE_AA)
             y += 20
+        # dibuja trayectorias
         for m in segs:
             pts = np.array([(int(px*W), int(py*H)) for (px,py) in m.path], dtype=np.int32)
             for k in range(1, len(pts)):
                 cv2.line(frame, pts[k-1], pts[k], (0,255,255), 2)
             if len(pts):
                 cv2.circle(frame, pts[-1], 4, (0,140,255), -1)
+
+        # marca el frame de “pose”
+        if pose_frames.get(fidx, False):
+            cv2.putText(frame, "POSE", (W-120, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,180), 3, cv2.LINE_AA)
+            cv2.putText(frame, "POSE", (W-120, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,0,255), 2, cv2.LINE_AA)
+
         out.write(frame); fidx += 1
     out.release(); cap.release()
     return out_path
