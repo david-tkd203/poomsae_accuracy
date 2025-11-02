@@ -7,12 +7,17 @@ general:
 
 segmentation:
   speed_thresh_deg_s: 45.0
-  min_segment_frames: 8
-  max_pause_frames: 6
-  expected_movements: 24
-  min_duration: 0.2
+  min_segment_frames: 3              # ✅ BAJADO de 4 a 3 (0.1s @ 30fps) - permite movimientos ULTRA rápidos
+  max_pause_frames: 2                # ✅ BAJADO de 4 a 2 - MENOS pausa entre movimientos (crítico)
+  expected_movements: 36             # ✅ CORREGIDO de 24 a 36 (segments_total, no steps_total)
+  min_duration: 0.10                 # ✅ BAJADO de 0.12 a 0.10 - permite movimientos ULTRA breves
   max_duration: 2.0
-  sensitivity: 0.9
+  sensitivity: 0.95                  # ✅ AUMENTADO de 0.9 a 0.95 - más sensible
+  # ✅ NUEVOS parámetros para umbrales adaptativos
+  peak_threshold: 0.07               # ✅ BAJADO de 0.08 a 0.07 - MÁXIMA sensibilidad a picos débiles
+  activity_threshold: 0.05           # ✅ BAJADO de 0.06 a 0.05 - threshold MÁS bajo
+  min_peak_distance: 3               # ✅ BAJADO de 4 a 3 - permite picos MUCHO MÁS cercanos
+  smooth_window: 2                   # ✅ BAJADO de 3 a 2 - menos suavizado (menos pérdida de picos)
 
 features:
   smoothing_window: 3

@@ -151,12 +151,21 @@ class EnhancedSegmenter:
         # Suavizar señal
         smoothed = self._smooth_signal(energy_signal)
         
-        # Encontrar picos
+        # ✅ MEJORADO: Usar percentiles adaptativos para mayor robustez
+        q75 = np.percentile(smoothed, 75)
+        q25 = np.percentile(smoothed, 25)
+        # Usar rango intercuartil (IQR) para mejor adaptación a ruido
+        dynamic_threshold = q25 + 0.35 * (q75 - q25)
+        
+        # Usar el máximo de threshold estático y dinámico
+        effective_threshold = max(self.peak_thresh, dynamic_threshold * 0.5)
+        
+        # ✅ MEJORADO: Parámetros menos restrictivos para capturar más picos
         peaks, properties = signal.find_peaks(
             smoothed, 
-            height=self.peak_threshold,
+            height=effective_threshold,      # Usar threshold adaptativo
             distance=self.min_peak_distance,
-            prominence=0.1
+            prominence=max(0.05, effective_threshold * 0.3)  # Prominencia adaptativa
         )
         
         return peaks.tolist()
@@ -165,15 +174,20 @@ class EnhancedSegmenter:
                                   total_frames: int) -> Tuple[int, int]:
         """Expandir segmento alrededor de un pico"""
         
+        # ✅ MEJORADO: Usar percentiles para threshold local más robusto
+        q10 = np.percentile(energy_signal, 10)
+        q50 = np.percentile(energy_signal, 50)
+        local_thresh = q10 + 0.3 * (q50 - q10)
+        
         # Buscar inicio hacia atrás
         start = peak_idx
-        while start > 0 and energy_signal[start] > self.activity_thresh:
+        while start > 0 and energy_signal[start] > local_thresh:
             start -= 1
         start = max(0, start)
         
         # Buscar fin hacia adelante  
         end = peak_idx
-        while end < total_frames - 1 and energy_signal[end] > self.activity_thresh:
+        while end < total_frames - 1 and energy_signal[end] > local_thresh:
             end += 1
         end = min(total_frames - 1, end)
         

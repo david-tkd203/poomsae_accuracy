@@ -169,15 +169,23 @@ class SpecAwareSegmenter:
             return np.zeros(1000)
             
         grads = []
-        # Priorizar ángulos de rodilla para detectar posturas
-        for angle_name in ['left_knee', 'right_knee', 'left_elbow', 'right_elbow']:
+        # ✅ MEJORADO: Incluir todos los ángulos disponibles (codos, caderas, rodillas)
+        priority_angles = ['left_elbow', 'right_elbow', 'left_knee', 'right_knee', 'left_hip', 'right_hip']
+        
+        for angle_name in priority_angles:
             if angle_name in angles_dict:
                 angle_series = angles_dict[angle_name]
                 if len(angle_series) > 1:
                     grad = np.abs(np.gradient(angle_series)) * fps
-                    # Más peso a cambios en rodillas (posturas)
-                    if 'knee' in angle_name:
-                        grad *= 1.5
+                    
+                    # Pesos según importancia para Taekwondo
+                    if 'elbow' in angle_name:
+                        grad *= 1.3  # Muy importante para brazos
+                    elif 'knee' in angle_name:
+                        grad *= 1.5  # Crítico para posturas
+                    elif 'hip' in angle_name:
+                        grad *= 1.0  # Estándar para rotaciones
+                    
                     grads.append(grad)
         
         if not grads:
@@ -533,11 +541,26 @@ class CaptureResult:
     poomsae_spec: Dict = None
     
     def to_json(self) -> str:
+        import numpy as np
+        
+        def convert_numpy(obj):
+            if isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, dict):
+                return {k: convert_numpy(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [convert_numpy(item) for item in obj]
+            return obj
+        
         data = {
             "video_id": self.video_id,
-            "fps": self.fps,
-            "nframes": self.nframes,
-            "moves": [asdict(m) for m in self.moves]
+            "fps": float(self.fps),
+            "nframes": int(self.nframes),
+            "moves": [convert_numpy(asdict(m)) for m in self.moves]
         }
         if self.poomsae_spec:
             data["poomsae_spec"] = self.poomsae_spec
@@ -575,7 +598,7 @@ def capture_moves_with_spec(csv_path: Path,
     landmarks_dict = {}
     landmark_points = ['L_SH', 'R_SH', 'L_HIP', 'R_HIP', 
                       'L_WRIST', 'R_WRIST', 'L_ANK', 'R_ANK',
-                      'L_KNEE', 'R_KNEE']
+                      'L_KNEE', 'R_KNEE', 'L_ELB', 'R_ELB']  # ✅ AGREGAR codos
     
     for point in landmark_points:
         if point in LMK:
@@ -605,6 +628,44 @@ def capture_moves_with_spec(csv_path: Path,
         
         angles_dict['left_knee'] = np.array(left_knee_angles)
         angles_dict['right_knee'] = np.array(right_knee_angles)
+        
+        # ✅ AGREGAR: Ángulos de codo (crítico para STRIKES/BLOCKS)
+        if 'L_SH' in landmarks_dict and 'L_ELB' in landmarks_dict and 'L_WRIST' in landmarks_dict:
+            l_sh = landmarks_dict['L_SH']
+            l_elb = landmarks_dict['L_ELB']
+            l_wri = landmarks_dict['L_WRIST']
+            r_sh = landmarks_dict['R_SH']
+            r_elb = landmarks_dict['R_ELB']
+            r_wri = landmarks_dict['R_WRIST']
+            
+            left_elbow_angles = []
+            right_elbow_angles = []
+            
+            min_elb_len = min(len(l_sh), len(l_elb), len(l_wri),
+                             len(r_sh), len(r_elb), len(r_wri))
+            
+            for i in range(min_elb_len):
+                left_elb_angle = angle3(l_sh[i], l_elb[i], l_wri[i])
+                right_elb_angle = angle3(r_sh[i], r_elb[i], r_wri[i])
+                left_elbow_angles.append(left_elb_angle)
+                right_elbow_angles.append(right_elb_angle)
+            
+            angles_dict['left_elbow'] = np.array(left_elbow_angles)
+            angles_dict['right_elbow'] = np.array(right_elbow_angles)
+        
+        # ✅ AGREGAR: Ángulos de cadera (importante para detección de giros)
+        if 'L_SH' in landmarks_dict and 'L_HIP' in landmarks_dict and 'L_KNEE' in landmarks_dict:
+            left_hip_angles = []
+            right_hip_angles = []
+            
+            for i in range(min_len):
+                left_hip_angle = angle3(l_sh[i], l_hip[i], l_knee[i])
+                right_hip_angle = angle3(r_sh[i], r_hip[i], r_knee[i])
+                left_hip_angles.append(left_hip_angle)
+                right_hip_angles.append(right_hip_angle)
+            
+            angles_dict['left_hip'] = np.array(left_hip_angles)
+            angles_dict['right_hip'] = np.array(right_hip_angles)
         
     except Exception as e:
         print(f"[CAPTURE] Error calculando ángulos: {e}")

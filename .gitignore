@@ -5,7 +5,9 @@ previews/
 # Ignorar archivos y carpetas de pycache
 __pycache__/
 */__pycache__/
-
+debug_plots/
+reports/
+.venv/
 # Ignorar archivos .pyc
 *.pyc
 */**/*.pyc

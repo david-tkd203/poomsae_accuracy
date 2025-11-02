@@ -10,9 +10,9 @@
         "dtw_good": 0.25
     },
     "levels": {
-        "olgul_max_rel": -0.02,
-        "arae_min_rel": 1.03,
-        "momtong_band": [0.05, 0.95]
+        "olgul_max_rel": 0.25,
+        "arae_min_rel": 0.75,
+        "momtong_band": [0.25, 0.75]
     },
     "stances": {
         "ap_kubi": {
