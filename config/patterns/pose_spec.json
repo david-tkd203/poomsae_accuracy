@@ -26,14 +26,14 @@
         "rear_foot_turn_min_deg": 25.0
         },
         "dwit_kubi": {
-        "ankle_dist_min_sw": 0.18,
-        "ankle_dist_max_sw": 0.60,
+        "ankle_dist_min_sw": 0.05,
+        "ankle_dist_max_sw": 0.50,
         "hip_minus_feet_center_min": 0.020,
         "front_knee_min_deg": 165.0,
         "rear_knee_max_deg": 155.0
         },
         "beom_seogi": {
-        "ankle_dist_max_sw": 0.18,
+        "ankle_dist_max_sw": 0.08,
         "hip_minus_feet_center_min": 0.015
         }
     },

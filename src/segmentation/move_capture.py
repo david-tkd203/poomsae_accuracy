@@ -373,36 +373,129 @@ def load_landmarks_csv(csv_path: Path) -> pd.DataFrame:
     return df
 
 def series_xy(df: pd.DataFrame, lmk_id: int, nframes: int) -> np.ndarray:
+    """
+    Extrae serie temporal de coordenadas (x,y) para un landmark.
+    Aplica forward-fill y backward-fill para interpolar gaps de NaN.
+    Si todo el landmark está ausente, retorna array con 0.5 (centro de imagen).
+    """
     sub = df[df["lmk_id"] == lmk_id][["frame","x","y"]]
     arr = np.full((nframes, 2), np.nan, dtype=np.float32)
-    idx = sub["frame"].to_numpy(dtype=int)
-    xy = sub[["x","y"]].to_numpy(np.float32)
-    idx = np.clip(idx, 0, nframes-1)
-    arr[idx] = xy
     
-    # Interpolación para valores faltantes
+    if len(sub) > 0:
+        idx = sub["frame"].to_numpy(dtype=int)
+        xy = sub[["x","y"]].to_numpy(np.float32)
+        idx = np.clip(idx, 0, nframes-1)
+        arr[idx] = xy
+    
+    # Interpolación para valores faltantes: forward-fill y backward-fill
     for k in range(2):
         v = arr[:,k]
         if np.isnan(v).any():
-            for i in range(1, len(v)):
-                if np.isnan(v[i]) and not np.isnan(v[i-1]):
-                    v[i] = v[i-1]
-            for i in range(len(v)-2, -1, -1):
-                if np.isnan(v[i]) and not np.isnan(v[i+1]):
-                    v[i] = v[i+1]
+            # Forward fill
+            last_valid = None
+            for i in range(len(v)):
+                if not np.isnan(v[i]):
+                    last_valid = v[i]
+                elif last_valid is not None:
+                    v[i] = last_valid
+            
+            # Backward fill
+            last_valid = None
+            for i in range(len(v)-1, -1, -1):
+                if not np.isnan(v[i]):
+                    last_valid = v[i]
+                elif last_valid is not None:
+                    v[i] = last_valid
+            
             arr[:,k] = v
+    
+    # Si todavía quedan NaN (landmark nunca apareció), usar centro de imagen
+    arr = np.nan_to_num(arr, nan=0.5)
+    
     return arr
 
 # ---------------- Clasificación con Especificaciones ----------------
 class PoseClassifier:
     """Clasificador que utiliza las especificaciones de pose"""
     
-    def __init__(self, config: PoomsaeConfig):
+    def __init__(self, config: PoomsaeConfig, use_ml=False, ml_model_path=None):
         self.config = config
         self.pose_spec = config.pose_spec
+        self.use_ml = use_ml
+        self.ml_classifier = None
+        
+        if use_ml and ml_model_path:
+            try:
+                import sys
+                from pathlib import Path
+                # Agregar src a path para imports
+                src_path = Path(__file__).parent.parent
+                if str(src_path) not in sys.path:
+                    sys.path.insert(0, str(src_path))
+                
+                from model.stance_classifier import StanceClassifier
+                self.ml_classifier = StanceClassifier.load(ml_model_path)
+                print(f"[CLASSIFIER] ✅ Modelo ML cargado: {ml_model_path}")
+            except Exception as e:
+                print(f"[CLASSIFIER] ⚠️ Error cargando ML, usando heurístico: {e}")
+                self.use_ml = False
 
-    def classify_stance(self, landmarks_dict, frame_idx: int) -> str:
-        """Clasifica postura usando especificaciones"""
+    def classify_stance(self, landmarks_dict, frame_idx: int, debug=False) -> str:
+        """Clasifica postura usando especificaciones o ML"""
+        # Si ML está habilitado, usarlo
+        if self.use_ml and self.ml_classifier:
+            return self._classify_with_ml(landmarks_dict, frame_idx, debug)
+        
+        # Fallback a clasificador heurístico
+        return self._classify_heuristic(landmarks_dict, frame_idx, debug)
+    
+    def _classify_with_ml(self, landmarks_dict, frame_idx: int, debug=False) -> str:
+        """Clasificador ML usando features extraídas"""
+        try:
+            from features.stance_features import extract_stance_features_from_dict
+            
+            # Verificar que landmarks necesarios existen
+            required_lmks = ['L_ANK', 'R_ANK', 'L_KNEE', 'R_KNEE', 'L_HIP', 'R_HIP', 
+                           'L_SH', 'R_SH', 'L_HEEL', 'R_HEEL', 'L_FOOT', 'R_FOOT']
+            
+            for lmk in required_lmks:
+                if lmk not in landmarks_dict:
+                    if debug:
+                        print(f"[ML] Frame {frame_idx}: Missing landmark {lmk}, fallback heurístico")
+                    return self._classify_heuristic(landmarks_dict, frame_idx, debug)
+            
+            # Extraer features del frame actual
+            features = extract_stance_features_from_dict(landmarks_dict, frame_idx)
+            
+            # Verificar NaN en features
+            if any(np.isnan(v) for v in features.values()):
+                if debug:
+                    print(f"[ML] Frame {frame_idx}: NaN en features, fallback heurístico")
+                return self._classify_heuristic(landmarks_dict, frame_idx, debug)
+            
+            # Preparar array de features
+            FEATURE_NAMES = ['ankle_dist_sw', 'hip_offset_x', 'hip_offset_y', 
+                           'knee_angle_left', 'knee_angle_right',
+                           'foot_angle_left', 'foot_angle_right', 'hip_behind_feet']
+            
+            X = np.array([[features[k] for k in FEATURE_NAMES]])
+            
+            # Predecir
+            prediction = self.ml_classifier.predict(X)[0]
+            
+            if debug:
+                proba = self.ml_classifier.predict_proba(X)[0]
+                print(f"[ML] Frame {frame_idx}: {prediction} (proba: {max(proba):.2f})")
+            
+            return prediction
+            
+        except Exception as e:
+            if debug:
+                print(f"[ML] Frame {frame_idx}: Error en predicción: {e}, fallback heurístico")
+            return self._classify_heuristic(landmarks_dict, frame_idx, debug)
+    
+    def _classify_heuristic(self, landmarks_dict, frame_idx: int, debug=False) -> str:
+        """Clasificador heurístico original"""
         try:
             lank = landmarks_dict['L_ANK'][frame_idx]
             rank = landmarks_dict['R_ANK'][frame_idx]
@@ -410,65 +503,87 @@ class PoseClassifier:
             rkne = landmarks_dict['R_KNEE'][frame_idx]
             lhip = landmarks_dict['L_HIP'][frame_idx]
             rhip = landmarks_dict['R_HIP'][frame_idx]
+            lsh = landmarks_dict['L_SH'][frame_idx]
+            rsh = landmarks_dict['R_SH'][frame_idx]
+            
+            # Validar que no haya NaN
+            all_points = [lank, rank, lkne, rkne, lhip, rhip, lsh, rsh]
+            if any(np.any(np.isnan(pt)) for pt in all_points):
+                if debug:
+                    print(f"[CLASSIFIER] Frame {frame_idx}: Landmarks con NaN detectados")
+                return "moa_seogi"
             
             # Distancia entre pies (normalizada por ancho de hombros)
-            shoulder_width = np.linalg.norm(
-                landmarks_dict['L_SH'][frame_idx] - landmarks_dict['R_SH'][frame_idx]
-            )
-            foot_dist = np.linalg.norm(lank - rank) / (shoulder_width + 1e-6)
+            shoulder_width = np.linalg.norm(rsh - lsh)
+            
+            # Validar shoulder width mínimo
+            if shoulder_width < 0.02:
+                if debug:
+                    print(f"[CLASSIFIER] Frame {frame_idx}: Shoulder width muy pequeño ({shoulder_width:.4f})")
+                return "moa_seogi"
+            
+            foot_dist = np.linalg.norm(lank - rank) / shoulder_width
             
             # Ángulos de rodilla
             l_knee_angle = angle3(lhip, lkne, lank)
             r_knee_angle = angle3(rhip, rkne, rank)
             
-            # Verificar contra especificaciones
-            if self._check_ap_kubi(foot_dist, l_knee_angle, r_knee_angle):
-                return "ap_kubi"
-            elif self._check_dwit_kubi(foot_dist, l_knee_angle, r_knee_angle):
-                return "dwit_kubi"
-            elif self._check_beom_seogi(foot_dist):
-                return "beom_seogi"
+            if debug:
+                print(f"[CLASSIFIER] Frame {frame_idx}: foot_dist={foot_dist:.4f}, "
+                      f"l_knee={l_knee_angle:.1f}°, r_knee={r_knee_angle:.1f}°, "
+                      f"shoulder_w={shoulder_width:.4f}")
+            
+            # Verificar contra especificaciones en orden correcto
+            if self._check_ap_kubi(foot_dist, l_knee_angle, r_knee_angle, debug):
+                stance = "ap_kubi"
+            elif self._check_dwit_kubi(foot_dist, l_knee_angle, r_knee_angle, debug):
+                stance = "dwit_kubi"
+            elif self._check_beom_seogi(foot_dist, debug):
+                stance = "beom_seogi"
             else:
-                return "moa_seogi"
+                stance = "moa_seogi"
+            
+            if debug:
+                print(f"[CLASSIFIER] Frame {frame_idx}: Clasificado como {stance}")
+            
+            return stance
                 
         except Exception as e:
-            print(f"[CLASSIFIER] Error clasificando postura: {e}")
+            print(f"[CLASSIFIER] Error clasificando postura en frame {frame_idx}: {e}")
             return "moa_seogi"
 
-    def _check_ap_kubi(self, foot_dist, l_knee_angle, r_knee_angle):
-        """Verifica si cumple especificación de ap_kubi"""
-        if not self.pose_spec or 'stances' not in self.pose_spec:
-            return foot_dist > 0.3 and l_knee_angle < 140 and r_knee_angle < 140
-            
-        spec = self.pose_spec['stances'].get('ap_kubi', {})
-        ankle_min = spec.get('ankle_dist_min_sw', 0.3)
-        ankle_leve = spec.get('ankle_dist_leve_sw', 0.26)
-        knee_max = spec.get('front_knee_max_deg', 155.0)
+    def _check_ap_kubi(self, foot_dist, l_knee_angle, r_knee_angle, debug=False):
+        """Verifica si cumple especificación de ap_kubi - SIMPLIFICADO"""
+        # SIMPLIFICACIÓN: Solo usar ankle_dist (sin knee_angles)
+        # Umbral ajustado basado en P70 del análisis empírico
+        result = foot_dist >= 2.75
         
-        return (foot_dist >= ankle_leve and 
-                l_knee_angle <= knee_max and 
-                r_knee_angle <= knee_max)
+        if debug:
+            print(f"    ap_kubi: dist>={2.75:.2f} → {result}")
+        
+        return result
 
-    def _check_dwit_kubi(self, foot_dist, l_knee_angle, r_knee_angle):
-        """Verifica si cumple especificación de dwit_kubi"""
-        if not self.pose_spec or 'stances' not in self.pose_spec:
-            return 0.18 <= foot_dist <= 0.6
-            
-        spec = self.pose_spec['stances'].get('dwit_kubi', {})
-        ankle_min = spec.get('ankle_dist_min_sw', 0.18)
-        ankle_max = spec.get('ankle_dist_max_sw', 0.60)
+    def _check_dwit_kubi(self, foot_dist, l_knee_angle, r_knee_angle, debug=False):
+        """Verifica si cumple especificación de dwit_kubi - SIMPLIFICADO"""
+        # SIMPLIFICACIÓN: Solo usar ankle_dist (sin knee_angles)
+        # Umbral ajustado: entre P10 y P70 del análisis
+        result = 0.5 <= foot_dist < 2.75
         
-        return ankle_min <= foot_dist <= ankle_max
+        if debug:
+            print(f"    dwit_kubi: {0.5:.1f}<=dist<{2.75:.2f} → {result}")
+        
+        return result
 
-    def _check_beom_seogi(self, foot_dist):
-        """Verifica si cumple especificación de beom_seogi"""
-        if not self.pose_spec or 'stances' not in self.pose_spec:
-            return foot_dist <= 0.18
-            
-        spec = self.pose_spec['stances'].get('beom_seogi', {})
-        ankle_max = spec.get('ankle_dist_max_sw', 0.18)
+    def _check_beom_seogi(self, foot_dist, debug=False):
+        """Verifica si cumple especificación de beom_seogi - SIMPLIFICADO"""
+        # SIMPLIFICACIÓN: Solo usar ankle_dist
+        # Umbral ajustado basado en P10 del análisis
+        result = foot_dist < 0.5
         
-        return foot_dist <= ankle_max
+        if debug:
+            print(f"    beom_seogi: dist<{0.5:.1f} → {result}")
+        
+        return result
 
     def classify_kick(self, ankle_xy: np.ndarray, hip_xy: np.ndarray, kick_type: str = None) -> str:
         """Clasifica patada usando especificaciones"""
@@ -571,7 +686,9 @@ def capture_moves_with_spec(csv_path: Path,
                            video_path: Optional[Path] = None,
                            config_path: Path = Path("config/default.yaml"),
                            spec_path: Path = Path("config/patterns/8yang_spec.json"),
-                           pose_spec_path: Path = Path("config/patterns/pose_spec.json")
+                           pose_spec_path: Path = Path("config/patterns/pose_spec.json"),
+                           use_ml_classifier: bool = False,
+                           ml_model_path: Optional[Path] = None
                           ) -> CaptureResult:
     """
     Captura movimientos usando las especificaciones del Poomsae 8yang
@@ -598,7 +715,8 @@ def capture_moves_with_spec(csv_path: Path,
     landmarks_dict = {}
     landmark_points = ['L_SH', 'R_SH', 'L_HIP', 'R_HIP', 
                       'L_WRIST', 'R_WRIST', 'L_ANK', 'R_ANK',
-                      'L_KNEE', 'R_KNEE', 'L_ELB', 'R_ELB']  # ✅ AGREGAR codos
+                      'L_KNEE', 'R_KNEE', 'L_ELB', 'R_ELB',
+                      'L_HEEL', 'R_HEEL', 'L_FOOT', 'R_FOOT']  # ✅ AGREGAR talones y pies para ML
     
     for point in landmark_points:
         if point in LMK:
@@ -672,7 +790,7 @@ def capture_moves_with_spec(csv_path: Path,
     
     # Configurar segmentador y clasificador
     segmenter = SpecAwareSegmenter(config)
-    classifier = PoseClassifier(config)
+    classifier = PoseClassifier(config, use_ml=use_ml_classifier, ml_model_path=ml_model_path)
     
     # Encontrar segmentos
     segments = segmenter.find_segments(angles_dict, landmarks_dict, fps)

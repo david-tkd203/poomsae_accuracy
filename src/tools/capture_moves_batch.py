@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
-from src.segmentation.move_capture import capture_moves_from_csv, render_preview
+from src.segmentation.move_capture import capture_moves_with_spec
+# from src.segmentation.move_capture import render_preview  # TODO: agregar cuando esté disponible
 
 VIDEO_EXTS = (".mp4", ".mkv", ".webm", ".mov", ".m4v", ".avi", ".mpg", ".mpeg")
 
@@ -54,6 +55,13 @@ def main():
     ap.add_argument("--preview-dir", default="previews")
     ap.add_argument("--force-expected", action="store_true",
                 help="Si se indica, fuerza a N=spec usando cortes por cuantiles.")
+    
+    # ML classifier
+    ap.add_argument("--use-ml-classifier", action="store_true",
+                   help="Usar clasificador ML en lugar del heurístico")
+    ap.add_argument("--ml-model", type=str, default="data/models/stance_classifier_final.pkl",
+                   help="Ruta al modelo ML entrenado")
+    
     args = ap.parse_args()
 
     landmarks_root = Path(args.landmarks_root)
@@ -86,25 +94,29 @@ def main():
             print(f"[WARN] Sin video para {stem}; se usará fps=30.")
         out_json = out_dir / f"{alias}_{stem}_moves.json"
         try:
-            res = capture_moves_from_csv(
-                cpath, video_path=vpath,
-                vstart=args.vstart, vstop=args.vstop,
-                min_dur=args.min_dur,      # ✅ antes estaba mal (min_dur=args.min_gap)
-                min_gap=args.min_gap,
-                smooth_win=args.smooth_win, poly_n=args.poly_n,
-                min_path_norm=args.min_path_norm,
-                expected_n=expected_n
+            # Preparar parámetros para ML si está habilitado
+            ml_model_path = Path(args.ml_model) if args.use_ml_classifier else None
+            
+            res = capture_moves_with_spec(
+                cpath, 
+                video_path=vpath,
+                use_ml_classifier=args.use_ml_classifier,
+                ml_model_path=ml_model_path
             )
-            out_json.write_text(res.to_json(), encoding="utf-8")
+            # Escribir JSON con encoding correcto
+            json_str = res.to_json()
+            with open(out_json, 'w', encoding='utf-8') as f:
+                f.write(json_str)
             print(f"[OK] {out_json.name}  (moves={len(res.moves)}  fps={res.fps:.2f})")
 
-            if args.preview and vpath and vpath.exists():
-                prev_path = Path(args.preview_dir) / f"{stem}_preview.mp4"
-                try:
-                    render_preview(vpath, res, prev_path, csv_path=cpath, draw_pose=True)
-                    print(f"      Preview: {prev_path}")
-                except Exception as e:
-                    print(f"      [WARN] Preview falló: {e}")
+            # TODO: render_preview no disponible aún
+            # if args.preview and vpath and vpath.exists():
+            #     prev_path = Path(args.preview_dir) / f"{stem}_preview.mp4"
+            #     try:
+            #         render_preview(vpath, res, prev_path, csv_path=cpath, draw_pose=True)
+            #         print(f"      Preview: {prev_path}")
+            #     except Exception as e:
+            #         print(f"      [WARN] Preview falló: {e}")
         except Exception as e:
             print(f"[ERR] {cpath.name}: {e}")
 
