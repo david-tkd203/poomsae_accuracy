@@ -10,9 +10,7 @@ if str(ROOT_DIR) not in sys.path:
 
 # Importar desde el path correcto
 try:
-    from src.segmentation.move_capture import (
-        capture_moves_from_csv, render_preview
-    )
+    from src.segmentation.move_capture import capture_moves_from_csv
 except ImportError as e:
     print(f"Error de importación: {e}")
     print("Buscando módulos alternativos...")
@@ -22,7 +20,6 @@ except ImportError as e:
     move_capture = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(move_capture)
     capture_moves_from_csv = move_capture.capture_moves_from_csv
-    render_preview = move_capture.render_preview
 
 def _expected_from_spec(spec_path: Path) -> int:
     d = json.loads(Path(spec_path).read_text(encoding="utf-8"))
@@ -80,9 +77,7 @@ def main():
         print(f"[OK] Segmentos detectados: {len(res.moves)}")
 
         if args.render_out:
-            render_p = Path(args.render_out)
-            render_preview(video_path, res, render_p, csv_path=csv_path, draw_pose=(not args.no_pose))
-            print(f"[OK] Preview -> {render_p}")
+            print(f"[WARN] Render preview no disponible actualmente")
 
     except Exception as e:
         print(f"[ERROR] Falló la captura: {e}")

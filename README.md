@@ -2,19 +2,19 @@
 
 
 
-> **Automated technical accuracy analysis system for Taekwondo WT Poomsae using computer vision and machine learning.**==============================================
+> **Automated technical accuracy analysis system for Taekwondo WT Poomsae using computer vision and machine learning.**
 
 
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)Sistema automatizado para análisis y evaluación de exactitud técnica en Poomsae (Taekwondo WT) basado en análisis de video y aprendizaje automático.
+[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
 
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10-green.svg)](https://mediapipe.dev/)
 
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3-orange.svg)](https://scikit-learn.org/)Resumen del proyecto
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3-orange.svg)](https://scikit-learn.org/)
 
 [![License](https://img.shields.io/badge/License-Academic-red.svg)](LICENSE)
 
-## Descripción del Proyecto--------------------
+## Descripción del Proyecto
 
 ---
 
