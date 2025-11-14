@@ -5,7 +5,13 @@ class SegmentInfer:
     def __init__(self, model_path):
         bundle = joblib.load(model_path)
         self.model = bundle["model"]
-        self.cols  = bundle["cols"]
+        # Compatibilidad: acepta 'feature_cols' o 'cols'
+        if "feature_cols" in bundle:
+            self.cols = bundle["feature_cols"]
+        elif "cols" in bundle:
+            self.cols = bundle["cols"]
+        else:
+            raise KeyError("No se encontraron las columnas de features en el modelo (feature_cols/cols)")
 
     def predict_row(self, feat_row_dict):
         x = np.array([feat_row_dict.get(c, 0.0) for c in self.cols], float).reshape(1,-1)

@@ -7,6 +7,8 @@ __pycache__/
 */__pycache__/
 debug_plots/
 reports/
+PyKinect2/
+videos/
 .venv/
 comparacion_8yang_010/
 resultados_8yang_018/

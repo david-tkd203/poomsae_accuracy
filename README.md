@@ -1,3 +1,131 @@
+# Instalación y configuración rápida
+
+## 1. Requisitos principales
+
+- **Sistema operativo:** Windows 10/11 64-bit (recomendado y probado)
+- **Python:** 3.12.x (recomendado para compatibilidad con MediaPipe y scripts)
+- **FFmpeg:** Debe estar en el PATH del sistema (`ffmpeg -version` para verificar)
+- **Git:** Opcional, para clonar el repositorio
+
+## 2. Dependencias (requirements.txt)
+
+El sistema requiere las siguientes librerías principales:
+
+- PyQt5 (interfaz gráfica OBS)
+- pykinect2 (solo si usas Kinect real, Windows)
+- numpy, pandas, opencv-python, scipy
+- scikit-learn, joblib
+- pyyaml, python-dotenv, tqdm, pillow, openpyxl
+- yt-dlp, requests
+- matplotlib (opcional, depuración)
+- mediapipe (opcional, solo si usas Python < 3.13)
+- ultralytics, pyarrow, decord (opcional, solo no-Windows)
+
+Instala todo con:
+
+```powershell
+pip install -r requirements.txt
+```
+
+## 3. Creación y activación del entorno virtual
+
+**PowerShell (Windows):**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+**Bash (WSL/Linux/Mac):**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+## 4. Actualización de herramientas base
+
+```powershell
+python -m pip install --upgrade pip setuptools wheel
+```
+
+## 5. Verificar FFmpeg
+
+```powershell
+ffmpeg -version
+```
+
+## 6. Ejecución de scripts principales
+
+### Interfaz OBS (evaluación en tiempo real)
+
+```powershell
+python -m src.obs.main_obs
+```
+
+### Pipeline completo (offline)
+
+```powershell
+python -m src.main_offline --model "data/models/stance_classifier_final.pkl" --video "data/raw_videos/8yang/test/8yang_050.mp4" --report "data/reports/8yang_050.xlsx"
+```
+
+### Extracción de landmarks
+
+```powershell
+python -m src.tools.extract_landmarks --video "data/raw_videos/8yang/train/8yang_001.mp4" --out "data/landmarks/8yang/8yang_001.csv" --fps 30
+```
+
+### Segmentación de movimientos
+
+```powershell
+python -m src.tools.capture_moves --landmarks-file "data/landmarks/8yang/8yang_001.csv" --video-file "data/raw_videos/8yang/train/8yang_001.mp4" --spec "config/patterns/8yang_spec.json" --out "data/moves_ml/8yang_001_moves.json" --use-ml-classifier --ml-model "data/models/stance_classifier_final.pkl"
+```
+
+### Validación y scoring
+
+```powershell
+python -m src.tools.score_pal_yang --moves "data/moves_ml/8yang_001_moves.json" --spec "config/patterns/8yang_spec.json"
+```
+
+## 7. Notas de compatibilidad y advertencias
+
+- **MediaPipe:** Solo compatible oficialmente con Python <= 3.12. Si usas 3.13, puede fallar la instalación.
+- **Kinect:** Solo funciona en Windows y requiere pykinect2. Si no tienes Kinect, puedes omitir esa dependencia.
+- **FFmpeg:** Es obligatorio para procesamiento de video y descargas con yt-dlp.
+- **decord:** Solo para Linux/Mac, en Windows suele fallar. OpenCV cubre la funcionalidad básica.
+
+## 8. Estructura recomendada del proyecto
+
+```
+poomsae-accuracy/
+├─ config/
+├─ data/
+│  ├─ annotations/
+│  ├─ landmarks/
+│  ├─ models/
+│  ├─ raw_videos/
+│  └─ ...
+├─ reports/
+├─ src/
+│  ├─ obs/
+│  ├─ features/
+│  ├─ model/
+│  ├─ tools/
+│  └─ ...
+├─ requirements.txt
+└─ README.md
+```
+
+## 9. Preguntas frecuentes rápidas
+
+- **Error ModuleNotFoundError:** Activa el entorno virtual y ejecuta siempre con `python -m ...` desde la raíz.
+- **FFmpeg no encontrado:** Instala FFmpeg y agrégalo al PATH. Reabre PowerShell.
+- **MediaPipe no instala:** Usa Python 3.12.x.
+- **pykinect2 no instala:** Solo disponible en Windows, requiere drivers Kinect v2.
+
+---
+
+**Desarrollado para fines académicos y de investigación. Última actualización: Noviembre 2025.**
 # Poomsae Accuracy Assessment System# POOMSAE ACCURACYPOOMSAE ACCURACY — README DE USO Y COMANDOS
 
 

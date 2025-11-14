@@ -1,8 +1,33 @@
-# src/features/feature_extractor.py
+
 from __future__ import annotations
+# --- UTILIDAD PARA CREAR CARPETA DE SALIDA ---
+from pathlib import Path
+def ensure_dir(path):
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Genera features biomecánicos desde landmarks")
+    parser.add_argument('--in-root', required=True, help='Directorio de landmarks')
+    parser.add_argument('--out-root', required=True, help='Directorio de salida de features')
+    parser.add_argument('--alias', default='8yang', help='Alias del poomsae')
+    parser.add_argument('--overwrite', action='store_true', help='Sobrescribir archivos existentes')
+    args = parser.parse_args()
+
+    # Crear carpeta de salida si no existe
+    ensure_dir(args.out_root)
+
+    # Aquí iría el resto del procesamiento real de features
+    # Por ejemplo, cargar landmarks, procesar y guardar features
+    # ...
+# src/features/feature_extractor.py
 import numpy as np, pandas as pd
-from .angles import angles_from_landmarks
-from ..utils.smoothing import smooth
+import sys, os
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+from src.features.angles import angles_from_landmarks
+from src.utils.smoothing import smooth
 from math import atan2, cos, sin
 
 # Índices MediaPipe Pose
