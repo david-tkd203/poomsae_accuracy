@@ -5,9 +5,14 @@ previews/
 # Ignorar archivos y carpetas de pycache
 __pycache__/
 */__pycache__/
+obs_screenshots/
+kinect_test_recordings/
+kinect_recordings/
 debug_plots/
 reports/
 PyKinect2/
+.vscode/
+recordings/
 videos/
 .venv/
 comparacion_8yang_010/

@@ -1,0 +1,17 @@
+{
+  "layout": "studio",
+  "kinect_mode": "composite",
+  "include_webcams": true,
+  "target_height": 540,
+  "record_fps": 30,
+  "record_codec": "mp4v",
+  "record_scale": 0.6667,
+  "record_mosaic": true,
+  "out_root": "recordings",
+  "max_probe": 4,
+  "consecutive_fail_stop": 2,
+  "exclude_indices": [
+    1
+  ],
+  "exclude_name_contains": []
+}

@@ -1,8 +1,7 @@
 # ==== Interfaz gráfica y sensores ====
 PyQt5>=5.15
 pykinect2 ; platform_system == "Windows"  # solo si usas Kinect real
-PyQt5>=5.15
-pykinect2 ; platform_system == "Windows"  # solo si usas Kinect real
+
 
 # ==== Núcleo científico ====
 numpy>=1.26
