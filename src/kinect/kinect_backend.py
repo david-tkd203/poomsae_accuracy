@@ -9,6 +9,12 @@ KinectPoomsaeCapture (Kinect v2, PyKinect2)
 - 3D: Nube de puntos desde Depth (CoordinateMapper nativo o intrínsecos aprox.),
       color de nube desde RGB (Depth->ColorSpace) o por profundidad,
       y grabación periódica a .ply.
+
+Mejoras:
+- Cache de BodyIndex para usarlo en 3D.
+- get_point_cloud(..., mask_to_bodies=False, color_by_bidx=False)
+  * mask_to_bodies: filtra puntos donde BodyIndex==255
+  * color_by_bidx: colorea por persona (0..5) en vez de RGB/z
 """
 
 from pathlib import Path
@@ -64,9 +70,10 @@ class KinectPoomsaeCapture:
         self.color_size = (1920, 1080)   # (w, h)
         self.depth_ir_size = (512, 424)  # (w, h)
 
-        # caches para 3D
+        # caches para 3D/streams
         self._last_depth_cache = None
         self._last_color_cache = None
+        self._last_bidx_cache  = None  # ⬅️ NUEVO: BodyIndex
 
         # grabación RGB continua
         self.recording = False
@@ -175,9 +182,7 @@ class KinectPoomsaeCapture:
 
     # ---------------- 3D helpers (CoordinateMapper) ----------------
     def _map_depth_to_camera_space(self, depth_u16: np.ndarray):
-        """Usa CoordinateMapper para convertir depth -> CameraSpace (XYZ en metros).
-        Devuelve (N,3) float32 o None si falla.
-        """
+        """Usa CoordinateMapper para convertir depth -> CameraSpace (XYZ en metros)."""
         try:
             H, W = depth_u16.shape
             N = W * H
@@ -187,14 +192,13 @@ class KinectPoomsaeCapture:
             CSP_t = PyKinectV2._CameraSpacePoint * N
             csp = CSP_t()
 
-            # Mapear
+            # La firma en PyKinect2 acepta (N, depth_buf, W, H, csp)
             self.kinect._mapper.MapDepthFrameToCameraSpace(
                 ctypes.c_uint(N), depth_buf,
                 ctypes.c_uint(W), ctypes.c_uint(H),
                 csp
             )
 
-            # Convertir a numpy (coordenadas en metros)
             pts = np.empty((N, 3), dtype=np.float32)
             for i in range(N):
                 pts[i, 0] = csp[i].x
@@ -227,34 +231,58 @@ class KinectPoomsaeCapture:
             return None
 
     # ---------------- API de Nube de Puntos ----------------
-    def get_point_cloud(self, decimate=2, colorize=True, prefer_mapper=True):
+    def get_point_cloud(self,
+                        decimate: int = 2,
+                        colorize: bool = True,
+                        prefer_mapper: bool = True,
+                        mask_to_bodies: bool = False,
+                        color_by_bidx: bool = False):
         """
         Devuelve dict con:
           'points': (N,3) XYZ (m)
           'colors': (N,3) RGB 0..255 o None
-        Usa el mapper nativo si es posible; si no, intrínsecos aproximados.
-        Si colorize=True, intenta colorear con RGB; si no, colorea por profundidad.
+
+        - prefer_mapper: usa CoordinateMapper nativo si es posible
+        - decimate: muestreo en la grilla depth (1=sin decimar)
+        - mask_to_bodies: si hay BodyIndex, filtra puntos con bidx!=255
+        - color_by_bidx: si hay BodyIndex, colorea por persona (0..5)
+        - colorize: si True y no color_by_bidx -> intenta RGB; si falla -> z-colormap
         """
-        if self.kinect is None:
+        if self.kinect is None or not self.sensors.get('depth', False):
             return None
 
-        # depth actual o cache
-        if not self.sensors.get('depth', False):
-            return None
+        step = max(1, int(decimate))
 
+        # Depth (con caché)
         if self.kinect.has_new_depth_frame():
-            depth_frame = self.kinect.get_last_depth_frame().reshape((self.depth_ir_size[1], self.depth_ir_size[0])).astype(np.uint16)
+            depth_frame = self.kinect.get_last_depth_frame().reshape(
+                (self.depth_ir_size[1], self.depth_ir_size[0])
+            ).astype(np.uint16)
             self._last_depth_cache = depth_frame.copy()
         elif self._last_depth_cache is not None:
             depth_frame = self._last_depth_cache
         else:
             return None
 
-        # color actual (para colorear)
+        H, W = depth_frame.shape
+
+        # BodyIndex (si se usará)
+        bidx_frame = None
+        if (mask_to_bodies or color_by_bidx) and self.sensors.get('body_index', False):
+            if hasattr(self.kinect, 'has_new_body_index_frame') and self.kinect.has_new_body_index_frame():
+                b = self.kinect.get_last_body_index_frame()
+                bidx_frame = b.reshape((H, W)).astype(np.uint8, copy=False)
+                self._last_bidx_cache = bidx_frame.copy()
+            elif self._last_bidx_cache is not None:
+                bidx_frame = self._last_bidx_cache
+
+        # Color frame (para colorear con RGB si procede)
         color_frame = None
-        if colorize and self.sensors.get('color', False):
+        if colorize and self.sensors.get('color', False) and not color_by_bidx:
             if self.kinect.has_new_color_frame():
-                cf = self.kinect.get_last_color_frame().reshape((self.color_size[1], self.color_size[0], 4)).astype(np.uint8)[..., :3]
+                cf = self.kinect.get_last_color_frame().reshape(
+                    (self.color_size[1], self.color_size[0], 4)
+                ).astype(np.uint8)[..., :3]
                 self._last_color_cache = cf.copy()
                 color_frame = cf
             elif self._last_color_cache is not None:
@@ -265,31 +293,60 @@ class KinectPoomsaeCapture:
         if prefer_mapper:
             pts_all = self._map_depth_to_camera_space(depth_frame)
             if pts_all is not None:
-                if decimate > 1:
-                    pts_all = pts_all.reshape(self.depth_ir_size[1], self.depth_ir_size[0], 3)[::decimate, ::decimate, :].reshape(-1, 3)
-                points = pts_all
+                pts_dec = pts_all.reshape(H, W, 3)[::step, ::step, :].reshape(-1, 3)
+                points = pts_dec
 
         # 2) Fallback aproximado
         if points is None:
             intr = KINECTV2_DEPTH_INTRINSICS
             points = depth_to_points_approx(
                 depth_frame, intr["fx"], intr["fy"], intr["cx"], intr["cy"],
-                depth_scale=intr["depth_scale"], decimate=decimate
+                depth_scale=intr["depth_scale"], decimate=step
             )
+            if points is None or points.size == 0:
+                return None
 
-        # Colores
+        # --- máscara de válidos (finito y z>0) ---
+        valid = np.isfinite(points).all(axis=1)
+        if valid.any():
+            z = points[:, 2]
+            valid &= (z > 0)
+        if not valid.any():
+            return None
+
+        # --- máscara por BodyIndex (opcional) ---
+        mask_bodies = None
+        bidx_dec = None
+        if bidx_frame is not None:
+            bidx_dec = bidx_frame[::step, ::step].reshape(-1)
+            mask_bodies = (bidx_dec != 255)
+            if mask_to_bodies:
+                valid &= mask_bodies
+                if not valid.any():
+                    return {"points": np.zeros((0, 3), np.float32), "colors": None}
+
+        # --- Colores ---
         colors = None
-        if colorize:
+        if color_by_bidx and bidx_dec is not None:
+            # Paleta 6 personas + fondo
+            palette = np.zeros((256, 3), dtype=np.uint8)
+            palette[0] = (255, 0, 0)      # R
+            palette[1] = (0, 255, 0)      # G
+            palette[2] = (0, 0, 255)      # B
+            palette[3] = (255, 255, 0)    # Y
+            palette[4] = (255, 0, 255)    # M
+            palette[5] = (0, 255, 255)    # C
+            palette[255] = (40, 40, 40)   # Fondo oscuro
+            colors = palette[bidx_dec]
+            colors = colors.astype(np.uint8, copy=False)
+            colors = colors[valid]
+        elif colorize:
             if color_frame is not None and prefer_mapper:
-                # colorear con RGB real usando Depth->ColorSpace
+                # RGB real usando Depth->ColorSpace para los índices decimados
                 colsp_all = self._map_depth_to_color_space(depth_frame)
                 if colsp_all is not None:
-                    H, W = self.depth_ir_size[1], self.depth_ir_size[0]
-                    step = max(1, int(decimate))
                     vs, us = np.mgrid[0:H:step, 0:W:step]
                     idxs = (vs * W + us).ravel()
-
-                    # samplear solo indices decimados
                     col_list = np.zeros((idxs.size, 3), dtype=np.uint8)
                     for i, idx in enumerate(idxs):
                         cpt = colsp_all[idx]
@@ -298,10 +355,11 @@ class KinectPoomsaeCapture:
                             col_list[i] = color_frame[cy, cx]
                         else:
                             col_list[i] = (0, 0, 0)
-                    colors = col_list
+                    colors = col_list[valid]
                 else:
                     # fallback z-colormap
                     z = points[:, 2]
+                    z = z[valid]
                     z_norm = (z - z.min()) / max(1e-6, (z.max() - z.min()))
                     colors = np.stack([
                         255 * z_norm,
@@ -309,8 +367,9 @@ class KinectPoomsaeCapture:
                         255 * (1.0 - z_norm)
                     ], axis=-1).astype(np.uint8)
             else:
-                # fallback z-colormap
+                # z-colormap
                 z = points[:, 2]
+                z = z[valid]
                 z_norm = (z - z.min()) / max(1e-6, (z.max() - z.min()))
                 colors = np.stack([
                     255 * z_norm,
@@ -318,7 +377,14 @@ class KinectPoomsaeCapture:
                     255 * (1.0 - z_norm)
                 ], axis=-1).astype(np.uint8)
 
-        return {"points": points, "colors": colors}
+        # Aplicar máscara final de válidos (y, si corresponde, de cuerpos)
+        points = points[valid]
+        # si no generamos colors arriba, puede quedar None
+        if colors is not None and colors.shape[0] != points.shape[0]:
+            # Asegurar alineación (rara vez necesario si usamos 'valid' correctamente)
+            colors = colors[:points.shape[0]]
+
+        return {"points": points.astype(np.float32, copy=False), "colors": colors}
 
     def save_point_cloud_ply(self, out_path: str, decimate=2, colorize=True, prefer_mapper=True):
         pc = self.get_point_cloud(decimate=decimate, colorize=colorize, prefer_mapper=prefer_mapper)
@@ -392,7 +458,9 @@ class KinectPoomsaeCapture:
         if self.sensors['body_index'] and hasattr(self.kinect, 'has_new_body_index_frame') \
            and self.kinect.has_new_body_index_frame():
             bidx = self.kinect.get_last_body_index_frame()
-            fd['body_index'] = bidx.reshape((self.depth_ir_size[1], self.depth_ir_size[0])).astype(np.uint8, copy=False)
+            bidx = bidx.reshape((self.depth_ir_size[1], self.depth_ir_size[0])).astype(np.uint8, copy=False)
+            fd['body_index'] = bidx
+            self._last_bidx_cache = bidx.copy()   # ⬅️ NUEVO: cache
 
         # Bodies + métricas
         fd['bodies'] = []

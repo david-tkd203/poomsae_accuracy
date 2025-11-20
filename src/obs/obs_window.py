@@ -17,8 +17,12 @@ from src.obs.mosaic_view import build_mosaic
 from src.obs.camera_manager import CameraManager
 from src.kinect.kinect_backend import KinectPoomsaeCapture
 from src.obs.prepare_dialog import PrepareDialog
+from src.obs.settings_dialog import ObsSettingsDialog  # <-- NUEVO: diálogo real de ajustes
 
 # --------- Opcionales: 3D y análisis -------
+_PC_IMPORT_ERR = ""
+_AN_IMPORT_ERR = ""
+
 _HAS_PC = False
 PointCloudWidget = None
 try:
@@ -59,8 +63,6 @@ class ObsWindow(QtWidgets.QMainWindow):
     def __init__(self, cfg: ObsSettings):
         super().__init__()
         self.setWindowTitle("OBS Poomsae · Kinect v2 + Webcams")
-
-        # Arranque en pantalla completa / maximizada (mejor UX)
         try:
             self.showMaximized()
         except Exception:
@@ -74,6 +76,12 @@ class ObsWindow(QtWidgets.QMainWindow):
         self._rec_t0 = None
         self._last_session: Optional[Path] = None
         self._last_report: Optional[Path] = None
+
+        # Estado de layout dinámico (se sincroniza con cfg más abajo)
+        self._grid_override: Optional[Tuple[int, int]] = None   # (rows, cols) o None=Auto
+        self._max_tiles: int = 6
+        self._prefer_aspect: float = 16/9
+        self._max_cols: int = 6
 
         # Backend / Manager
         kbackend = KinectPoomsaeCapture(
@@ -94,8 +102,8 @@ class ObsWindow(QtWidgets.QMainWindow):
 
         # UI central
         self._build_toolbar()
-        self._build_dock_sources()   # DERECHA: fuentes
-        self._build_dock_panel()     # IZQUIERDA: menú/panel con Live, Reporte y 3D
+        self._build_dock_sources()
+        self._build_dock_panel()
 
         # Lienzo central
         self.image_label = QtWidgets.QLabel(alignment=QtCore.Qt.AlignCenter)
@@ -103,6 +111,9 @@ class ObsWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.image_label)
         self.status = self.statusBar()
         self.status.showMessage("Listo")
+
+        # Sincroniza estado con cfg (mosaico/grilla/etc.)
+        self._apply_cfg_to_state_and_toolbar()
 
         # Loop UI
         self.timer = QtCore.QTimer(self)
@@ -129,6 +140,20 @@ class ObsWindow(QtWidgets.QMainWindow):
         tb.addAction(self.act_rec); tb.addSeparator()
         tb.addAction(self.act_snap); tb.addSeparator()
         tb.addAction(self.act_layout); tb.addAction(self.act_kmode); tb.addAction(self.act_webcams); tb.addSeparator()
+
+        # --- Controles de mosaico responsivo ---
+        self.cmb_grid = QtWidgets.QComboBox()
+        self.cmb_grid.addItems(["Auto", "1x1", "2x2", "3x3", "4x4"])
+        self.cmb_grid.setCurrentIndex(0)
+        wa_grid = QtWidgets.QWidgetAction(self); wa_grid.setDefaultWidget(self.cmb_grid); tb.addAction(wa_grid)
+
+        self.spn_max_tiles = QtWidgets.QSpinBox()
+        self.spn_max_tiles.setRange(1, 36)
+        self.spn_max_tiles.setValue(self._max_tiles)
+        self.spn_max_tiles.setToolTip("Máximo de fuentes visibles en el mosaico")
+        wa_max = QtWidgets.QWidgetAction(self); wa_max.setDefaultWidget(self.spn_max_tiles); tb.addAction(wa_max)
+
+        tb.addSeparator()
         tb.addAction(self.act_cfg)
 
         self.act_rec.triggered.connect(self._toggle_record)
@@ -137,6 +162,59 @@ class ObsWindow(QtWidgets.QMainWindow):
         self.act_layout.triggered.connect(self._toggle_layout)
         self.act_kmode.triggered.connect(self._toggle_kinect_mode)
         self.act_webcams.triggered.connect(self._toggle_webcams)
+
+        self.cmb_grid.currentTextChanged.connect(self._on_grid_changed)
+        self.spn_max_tiles.valueChanged.connect(self._on_max_tiles_changed)
+
+    def _apply_cfg_to_state_and_toolbar(self):
+        """Sincroniza self.* y la barra con valores en cfg."""
+        # Mosaico / layout (si no existen en cfg, usa defaults locales)
+        self._prefer_aspect = float(getattr(self.cfg, "prefer_aspect", self._prefer_aspect))
+        self._max_cols = int(getattr(self.cfg, "max_cols", self._max_cols))
+        self._max_tiles = int(getattr(self.cfg, "max_tiles", self._max_tiles))
+        grid_rc = getattr(self.cfg, "grid_override", (None, None))
+        self._grid_override = grid_rc if (grid_rc and grid_rc[0] and grid_rc[1]) else None
+
+        # Ajusta toolbar
+        self.spn_max_tiles.blockSignals(True)
+        self.spn_max_tiles.setValue(self._max_tiles)
+        self.spn_max_tiles.blockSignals(False)
+
+        # Combo grilla
+        def rc_to_txt(rc):
+            if not rc or not rc[0] or not rc[1]:
+                return "Auto"
+            m = {(1,1): "1x1", (2,2): "2x2", (3,3): "3x3", (4,4): "4x4"}
+            return m.get((int(rc[0]), int(rc[1])), "Auto")
+
+        want_txt = rc_to_txt(grid_rc)
+        if self.cmb_grid.findText(want_txt) >= 0:
+            self.cmb_grid.blockSignals(True)
+            self.cmb_grid.setCurrentText(want_txt)
+            self.cmb_grid.blockSignals(False)
+
+        # Otros toggles
+        self.act_webcams.setChecked(bool(getattr(self.cfg, "include_webcams", self.cfg.include_webcams)))
+        self.act_layout.setText(f"Layout: {self.cfg.layout}")
+        self.act_kmode.setText(f"Kinect: {self.cfg.kinect_mode}")
+
+    def _on_grid_changed(self, txt: str):
+        mapping = {"Auto": None, "1x1": (1, 1), "2x2": (2, 2), "3x3": (3, 3), "4x4": (4, 4)}
+        self._grid_override = mapping.get(txt, None)
+        # Persistimos en cfg si se puede (si no está en dataclass, save lo omitirá)
+        self.cfg.grid_override = (None, None) if self._grid_override is None else self._grid_override
+        try:
+            self.cfg.save()
+        except Exception:
+            pass
+
+    def _on_max_tiles_changed(self, v: int):
+        self._max_tiles = int(v)
+        self.cfg.max_tiles = int(v)
+        try:
+            self.cfg.save()
+        except Exception:
+            pass
 
     def _build_dock_sources(self):
         dock = QtWidgets.QDockWidget("Fuentes", self)
@@ -151,8 +229,7 @@ class ObsWindow(QtWidgets.QMainWindow):
         row = QtWidgets.QHBoxLayout()
         self.btn_select_all = QtWidgets.QPushButton("Mostrar todas")
         self.btn_clear = QtWidgets.QPushButton("Ocultar todas")
-        row.addWidget(self.btn_select_all)
-        row.addWidget(self.btn_clear)
+        row.addWidget(self.btn_select_all); row.addWidget(self.btn_clear)
         v.addLayout(row)
         dock.setWidget(w)
         self.btn_select_all.clicked.connect(self._select_all_sources)
@@ -194,24 +271,33 @@ class ObsWindow(QtWidgets.QMainWindow):
         if _HAS_PC and PointCloudWidget is not None:
             self.pc_widget = PointCloudWidget()
 
-            # Llamadas tolerantes (por si el widget no tiene todos los métodos)
-            def _pc_call(name, *args):
-                if hasattr(self.pc_widget, name):
-                    getattr(self.pc_widget, name)(*args)
-
-            _pc_call('set_fov', 90)
-            _pc_call('set_clip', 0.01, 12000.0)
-            _pc_call('set_auto_fit', True)
-            _pc_call('set_accumulate', True, 1_800_000)
-            _pc_call('set_voxel_size', 0.02)
+            # Config por defecto
+            if hasattr(self.pc_widget, 'set_fov'): self.pc_widget.set_fov(90)
+            if hasattr(self.pc_widget, 'set_clip'): self.pc_widget.set_clip(0.01, 12000.0)
+            if hasattr(self.pc_widget, 'set_auto_fit'): self.pc_widget.set_auto_fit(True)
+            if hasattr(self.pc_widget, 'set_accumulate'): self.pc_widget.set_accumulate(True, 1_800_000)
+            if hasattr(self.pc_widget, 'set_voxel_size'): self.pc_widget.set_voxel_size(0.02)
 
             ctr = QtWidgets.QHBoxLayout()
             self.spn_dec = QtWidgets.QSpinBox(); self.spn_dec.setRange(1,6); self.spn_dec.setValue(3)
             self.spn_psz = QtWidgets.QDoubleSpinBox(); self.spn_psz.setRange(1.0, 10.0); self.spn_psz.setValue(3.0); self.spn_psz.setSingleStep(0.5)
             self.chk_color = QtWidgets.QCheckBox("Color desde RGB"); self.chk_color.setChecked(True)
+            self.chk_mask_bodies = QtWidgets.QCheckBox("Solo cuerpos (BodyIndex)"); self.chk_mask_bodies.setChecked(True)
+            self.chk_color_bidx = QtWidgets.QCheckBox("Color por persona (BodyIndex)"); self.chk_color_bidx.setChecked(True)
+
+            # Si color_by_bidx está activo, bloquea "Color desde RGB"
+            def _sync_color_checks():
+                use_bidx = self.chk_color_bidx.isChecked()
+                self.chk_color.setEnabled(not use_bidx)
+            self.chk_color_bidx.toggled.connect(_sync_color_checks)
+            _sync_color_checks()
+
             ctr.addWidget(QtWidgets.QLabel("Decimate:")); ctr.addWidget(self.spn_dec)
             ctr.addWidget(QtWidgets.QLabel("Tamaño punto:")); ctr.addWidget(self.spn_psz)
-            ctr.addWidget(self.chk_color); ctr.addStretch(1)
+            ctr.addWidget(self.chk_mask_bodies)
+            ctr.addWidget(self.chk_color_bidx)
+            ctr.addWidget(self.chk_color)
+            ctr.addStretch(1)
             v3.addLayout(ctr); v3.addWidget(self.pc_widget, 1)
 
             def _on_psz(v):
@@ -219,6 +305,7 @@ class ObsWindow(QtWidgets.QMainWindow):
                     self.pc_widget.set_point_size(v)
             self.spn_psz.valueChanged.connect(_on_psz)
         else:
+            self.pc_widget = None
             msg = QtWidgets.QLabel(
                 "Visor 3D deshabilitado.\n\n"
                 f"Motivo: {'pyqtgraph.opengl no disponible' if not _HAS_PC else 'Error importando PointCloudWidget'}\n"
@@ -253,14 +340,12 @@ class ObsWindow(QtWidgets.QMainWindow):
 
     def _toggle_record(self, is_on: bool):
         if is_on:
-            # 1) Preparación (mide FPS por fuente)
             prep = PrepareDialog(self, self.cm, layout=self.cfg.layout, kinect_mode=self.cfg.kinect_mode, duration=2.0)
             if prep.exec_() != QtWidgets.QDialog.Accepted:
                 self.act_rec.setChecked(False)
                 return
             fps_map = prep.get_fps_map()
 
-            # 2) Iniciar recorder
             try:
                 self.recorder = MultiRecorder(
                     out_root=self.cfg.out_root,
@@ -272,9 +357,9 @@ class ObsWindow(QtWidgets.QMainWindow):
                 )
                 session = self.recorder.start()
                 self._last_session = Path(session)
-                self.lbl_session.setText(f"Sesión: {self._last_session.name}")
+                if hasattr(self, "lbl_session"):
+                    self.lbl_session.setText(f"Sesión: {self._last_session.name}")
 
-                # Kinect RGB + PLY (si posible)
                 try:
                     self.cm._ensure_kinect_open()
                     kb = self.cm._kinect or self.cm._kinect_backend
@@ -286,10 +371,10 @@ class ObsWindow(QtWidgets.QMainWindow):
                     pc_dir = Path(session) / "pointcloud"
                     kb.start_pointcloud_recording(
                         out_dir=str(pc_dir),
-                        every_n=10,
-                        decimate=2,
-                        colorize=True,
-                        prefer_mapper=True
+                        every_n=int(getattr(self.cfg, "pc_every_n", 10)),
+                        decimate=int(getattr(self.cfg, "pc_decimate", 2)),
+                        colorize=bool(getattr(self.cfg, "pc_colorize", True)),
+                        prefer_mapper=bool(getattr(self.cfg, "pc_prefer_mapper", True))
                     )
                 except Exception as e:
                     self.status.showMessage(f"Kinect backend no pudo iniciar grabación: {e}")
@@ -307,7 +392,6 @@ class ObsWindow(QtWidgets.QMainWindow):
             self.recording = True
 
         else:
-            # detener
             try:
                 kb = self.cm._kinect or self.cm._kinect_backend
                 if kb and getattr(kb, "_pc_record_dir", None) is not None:
@@ -322,7 +406,8 @@ class ObsWindow(QtWidgets.QMainWindow):
                 session = self.recorder.stop()
                 if session:
                     self._last_session = Path(session)
-                    self.lbl_session.setText(f"Sesión: {self._last_session.name}")
+                    if hasattr(self, "lbl_session"):
+                        self.lbl_session.setText(f"Sesión: {self._last_session.name}")
 
             self.recording = False
             self.recorder = None
@@ -345,8 +430,32 @@ class ObsWindow(QtWidgets.QMainWindow):
         self.status.showMessage(f"Screenshot: {out}")
 
     def _open_settings(self):
-        dlg = QtWidgets.QMessageBox(self)
-        dlg.setText("Usa el diálogo de configuración existente (menú 'Ajustes').")
+        """Abre el diálogo de Ajustes y aplica cambios EN VIVO al cerrar/aplicar."""
+        def _apply_now(new_cfg: ObsSettings):
+            # 1) reconstruir CameraManager con el backend actual
+            old_kb = self.cm._kinect_backend or self.cm._kinect
+            try:
+                self.cm.release_all()
+            except Exception:
+                pass
+            self.cm = CameraManager(
+                kinect_backend=old_kb,
+                kinect_mode=new_cfg.kinect_mode,
+                max_probe=new_cfg.max_probe,
+                consecutive_fail_stop=new_cfg.consecutive_fail_stop,
+                exclude_indices=new_cfg.exclude_indices,
+                exclude_name_contains=new_cfg.exclude_name_contains,
+            )
+
+            # 2) actualizar acciones / estado UI
+            self.act_layout.setText(f"Layout: {new_cfg.layout}")
+            self.act_kmode.setText(f"Kinect: {new_cfg.kinect_mode}")
+            self.act_webcams.setChecked(bool(new_cfg.include_webcams))
+            self._apply_cfg_to_state_and_toolbar()
+            self._update_title()
+            self.status.showMessage("Ajustes aplicados.")
+
+        dlg = ObsSettingsDialog(self.cfg, apply_callback=_apply_now, parent=self)
         dlg.exec_()
 
     def _select_all_sources(self):
@@ -413,38 +522,59 @@ class ObsWindow(QtWidgets.QMainWindow):
                 continue
             show_frames[k] = v
 
-        # compositar
-        canvas = build_mosaic(show_frames, target_height=self.cfg.target_height,
-                              layout=self.cfg.layout, kinect_mode=self.cfg.kinect_mode)
+        # tamaño disponible (ancho/alto reales del label para responsividad)
+        avail_w = max(0, int(self.image_label.width()))
+        avail_h = max(0, int(self.image_label.height())) or self.cfg.target_height
+
+        # compositar responsivo (grid override + max tiles)
+        canvas = build_mosaic(
+            show_frames,
+            target_height=avail_h,
+            layout=self.cfg.layout,
+            kinect_mode=self.cfg.kinect_mode,
+            target_width=avail_w if avail_w > 0 else None,
+            grid=self._grid_override,
+            max_tiles=self._max_tiles,
+            prefer_aspect=self._prefer_aspect,
+            max_cols=self._max_cols,
+            show_labels=bool(getattr(self.cfg, "show_labels", True))
+        )
 
         if canvas is not None:
             self._last_canvas = canvas
             self._last_frames = show_frames
             self.image_label.setPixmap(QtGui.QPixmap.fromImage(cv_to_qimage(canvas)))
-            self._update_title(extra=f"{len(show_frames)} fuente(s)")
+            self._update_title(extra=f"{len(show_frames)} fuente(s) | {canvas.shape[1]}x{canvas.shape[0]}")
             if self.recording and self.recorder:
                 self.recorder.write_frames(show_frames, mosaic=canvas)
 
-        # --- LIVE ANALYSIS opcional ---
+        # --- LIVE ANALYSIS + 3D ---
         try:
             kb = self.cm._kinect or self.cm._kinect_backend
             if kb and getattr(kb, "kinect", None) is not None:
-                # refresca caches y (si hay) biomecánica
                 fd = kb.get_frame()
                 if _HAS_ANALYTICS and self.live_engine and fd and fd.get("biomechanics"):
                     self.live_engine.update_from_fd(fd)
                     rows = self.live_engine.as_table_rows()
                     self._populate_live_table(rows)
 
-                # 3D live si tab 3 (y visor disponible)
-                if _HAS_PC and hasattr(self, "pc_widget") and self._tabs.currentIndex() == 2:
-                    dec = int(getattr(self, "spn_dec", None).value()) if hasattr(self, "spn_dec") else 2
-                    col = bool(getattr(self, "chk_color", None).isChecked()) if hasattr(self, "chk_color") else True
-                    pc = kb.get_point_cloud(decimate=dec, colorize=col, prefer_mapper=True)
+                if _HAS_PC and self.pc_widget is not None and self._tabs.currentIndex() == 2:
+                    dec = int(self.spn_dec.value()) if hasattr(self, "spn_dec") else 2
+                    use_rgb = bool(self.chk_color.isChecked()) if hasattr(self, "chk_color") else True
+                    mask_bodies = bool(self.chk_mask_bodies.isChecked()) if hasattr(self, "chk_mask_bodies") else False
+                    color_by_bidx = bool(self.chk_color_bidx.isChecked()) if hasattr(self, "chk_color_bidx") else False
+
+                    pc = kb.get_point_cloud(
+                        decimate=dec,
+                        colorize=use_rgb,
+                        prefer_mapper=True,
+                        mask_to_bodies=mask_bodies,
+                        color_by_bidx=color_by_bidx
+                    )
                     if pc and pc.get("points") is not None:
                         self.pc_widget.update_cloud(pc["points"], pc.get("colors"))
         except Exception:
-            # no rompas el UI loop por errores de analítica/3D
+            # evita romper el loop UI por fallas de análisis/3D
             pass
 
         # contador HH:MM:SS

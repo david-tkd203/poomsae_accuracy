@@ -1,152 +1,222 @@
-#!/usr/bin/env python3
+# src/obs/mosaic_view.py
 # -*- coding: utf-8 -*-
-
+from __future__ import annotations
+from typing import Dict, Tuple, Optional, List
 import math
 import cv2
 import numpy as np
 
-PRIMARY_NAME = "Kinect RGB"      # en modo 'streams'
-PRIMARY_FALLBACK = "Kinect (Microsoft Kinect v2)"  # en modo 'composite'
-
-BG = (28, 28, 33)      # fondo
-GUTTER = 10            # margen entre “tarjetas”
-PAD = 8                # padding interno para etiqueta
+PAD_COLOR = (28, 28, 32)  # gris oscuro agradable
 
 
-def _label(img, text):
+# ---------------- utilidades internas ----------------
+def _safe_bgr(img: np.ndarray) -> np.ndarray:
+    """Devuelve BGR válido; maneja None, GRAY y BGRA."""
     if img is None:
-        return None
-    h, w = img.shape[:2]
-    overlay = img.copy()
-    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-    bx, by = PAD, PAD + th + 2
-    bw, bh = tw + 2*PAD, th + 2*PAD
-    cv2.rectangle(overlay, (PAD, PAD), (PAD + bw, PAD + bh), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.45, img, 0.55, 0, img)
-    cv2.putText(img, text, (bx, by), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (240, 240, 240), 2, cv2.LINE_AA)
+        return np.zeros((240, 320, 3), np.uint8)
+    if img.ndim == 2:
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    elif img.shape[-1] == 4:
+        img = img[..., :3]
+    # evita imágenes vacías
+    if img.size == 0 or img.shape[0] <= 1 or img.shape[1] <= 1:
+        return np.zeros((240, 320, 3), np.uint8)
     return img
 
 
-def _stack_grid(named_imgs, cols, tile_size):
-    """Devuelve una grilla (H, W, 3) con márgenes y fondo."""
-    if not named_imgs:
-        return None
-    tile_w, tile_h = tile_size
-    rows = int(math.ceil(len(named_imgs) / float(cols)))
-    W = cols * tile_w + (cols + 1) * GUTTER
-    H = rows * tile_h + (rows + 1) * GUTTER
-    canvas = np.full((H, W, 3), BG, dtype=np.uint8)
+def _letterbox(img: np.ndarray, dst_size: Tuple[int, int],
+               pad_color=PAD_COLOR) -> np.ndarray:
+    """Ajusta con barras (no deforma): dst_size=(W,H)."""
+    img = _safe_bgr(img)
+    dst_w, dst_h = int(dst_size[0]), int(dst_size[1])
+    if dst_w <= 0 or dst_h <= 0:
+        return img
 
-    i = 0
-    for r in range(rows):
-        for c in range(cols):
-            if i >= len(named_imgs):
-                break
-            name, im = named_imgs[i]
-            i += 1
-            if im is None:
-                continue
-            # resize manteniendo aspecto
-            h, w = im.shape[:2]
-            scale = min(tile_w / float(w), tile_h / float(h))
-            nw, nh = int(w*scale), int(h*scale)
-            thumb = cv2.resize(im, (nw, nh))
-            thumb = _label(thumb, name)
+    h, w = img.shape[:2]
+    if w == 0 or h == 0:
+        return np.full((dst_h, dst_w, 3), pad_color, np.uint8)
 
-            y0 = GUTTER + r*(tile_h + GUTTER) + (tile_h - nh)//2
-            x0 = GUTTER + c*(tile_w + GUTTER) + (tile_w - nw)//2
-            canvas[y0:y0+nh, x0:x0+nw] = thumb
-    return canvas
+    src_ratio = w / float(h)
+    dst_ratio = dst_w / float(dst_h)
 
-
-def build_studio(frames, target_height=540, kinect_mode="streams"):
-    """
-    Vista Studio:
-      - Panel grande a la izquierda: Kinect RGB (streams) o composite (fallback).
-      - Columna derecha: mini-grid 2x2 con Depth/IR/BodyIndex + webcams.
-    """
-    if not frames:
-        return None
-
-    # elegir primario
-    primary_key = PRIMARY_NAME if kinect_mode == "streams" else PRIMARY_FALLBACK
-    if primary_key not in frames:
-        # fallback al primero
-        primary_key = list(frames.keys())[0]
-
-    primary = frames.get(primary_key)
-    if primary is None:
-        return None
-
-    ph, pw = primary.shape[:2]
-    # altura objetivo para el panel grande
-    left_h = target_height
-    left_w = int(pw * (left_h / float(ph)))
-    left = cv2.resize(primary, (left_w, left_h))
-    left = _label(left, primary_key)
-
-    # recopilar “thumbnails” (todo lo que no sea el primario)
-    thumbs = []
-    for name, img in frames.items():
-        if name == primary_key or img is None:
-            continue
-        thumbs.append((name, img))
-
-    # grid 2x2 (o lo que entre)
-    grid = None
-    if thumbs:
-        # cada tile ~ 40% del alto del panel izquierdo
-        tile_h = max(160, int(left_h * 0.45))
-        tile_w = max(280, int(left_w * 0.55))
-        grid = _stack_grid(thumbs, cols=1, tile_size=(tile_w, tile_h))  # columna
-
-        # igualar altura a la izquierda
-        gh = grid.shape[0]
-        grid = cv2.resize(grid, (grid.shape[1], left_h if gh != left_h else gh))
-
-    # armar canvas con fondo y gutter central
-    if grid is not None:
-        H = max(left_h, grid.shape[0]) + 2*GUTTER
-        W = left_w + grid.shape[1] + 3*GUTTER
-        canvas = np.full((H, W, 3), BG, dtype=np.uint8)
-        # posiciones
-        yL = (H - left_h)//2
-        xL = GUTTER
-        yR = (H - grid.shape[0])//2
-        xR = left_w + 2*GUTTER
-        canvas[yL:yL+left_h, xL:xL+left_w] = left
-        canvas[yR:yR+grid.shape[0], xR:xR+grid.shape[1]] = grid
+    if src_ratio > dst_ratio:
+        new_w = dst_w
+        new_h = max(1, int(round(new_w / src_ratio)))
     else:
-        H = left_h + 2*GUTTER
-        W = left_w + 2*GUTTER
-        canvas = np.full((H, W, 3), BG, dtype=np.uint8)
-        canvas[GUTTER:GUTTER+left_h, GUTTER:GUTTER+left_w] = left
+        new_h = dst_h
+        new_w = max(1, int(round(new_h * src_ratio)))
 
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+    canvas = np.full((dst_h, dst_w, 3), pad_color, dtype=np.uint8)
+    y0 = (dst_h - new_h) // 2
+    x0 = (dst_w - new_w) // 2
+    canvas[y0:y0+new_h, x0:x0+new_w] = resized
     return canvas
 
 
-def build_grid(frames, target_height=540):
-    """Vista Grid general con fondo y márgenes."""
+def _label(img: np.ndarray, text: str) -> np.ndarray:
+    """Etiqueta en esquina sup-izq con auto-escala según alto del tile."""
+    if not text:
+        return img
+    im = img.copy()
+    H = im.shape[0]
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    # escala y grosor proporcionales al alto
+    fs = max(0.45, min(1.0, H / 400.0))
+    th = 1 if H < 400 else 2
+    (tw, th_text), _ = cv2.getTextSize(text, font, fs, th)
+    bx, by = 12, 16
+    pad = 6
+    cv2.rectangle(im,
+                  (bx - pad, by - th_text - pad),
+                  (bx + tw + pad, by + pad),
+                  (0, 0, 0), -1)
+    cv2.putText(im, text, (bx, by), font, fs, (240, 240, 240), th, cv2.LINE_AA)
+    return im
+
+
+def _best_grid(n: int, target_ratio: float, max_cols: int = 6) -> Tuple[int, int]:
+    """
+    Elige (rows, cols) que:
+      1) se acerquen al aspect target_ratio = W/H del contenedor
+      2) minimicen celdas vacías
+      3) respeten tope de columnas
+    """
+    if n <= 0:
+        return (0, 0)
+    best = (1, n)
+    best_cost = 1e9
+    for cols in range(1, min(max_cols, n) + 1):
+        rows = int(math.ceil(n / cols))
+        # diferencia de aspect del mosaico y penalización por celdas vacías
+        mosaic_ratio = cols / float(rows)
+        aspect_cost = abs(math.log((mosaic_ratio + 1e-9) / (target_ratio + 1e-9)))
+        empty = rows * cols - n
+        empty_cost = empty * 0.15  # penaliza filas/cols sobrantes
+        cost = aspect_cost + empty_cost
+        if cost < best_cost:
+            best_cost = cost
+            best = (rows, cols)
+    return best
+
+
+def _stack_grid(tiles: List[np.ndarray], rows: int, cols: int,
+                tile_size: Tuple[int, int]) -> np.ndarray:
+    """Apila tiles en (rows x cols). Si faltan, rellena con PAD_COLOR."""
+    W, H = tile_size
+    blank = np.full((H, W, 3), PAD_COLOR, dtype=np.uint8)
+    grid_rows = []
+    idx = 0
+    for r in range(rows):
+        row_imgs = []
+        for c in range(cols):
+            if idx < len(tiles):
+                row_imgs.append(tiles[idx])
+            else:
+                row_imgs.append(blank)
+            idx += 1
+        grid_rows.append(np.hstack(row_imgs))
+    return np.vstack(grid_rows)
+
+
+# ---------------- API principal ----------------
+def build_mosaic(
+    frames: Dict[str, np.ndarray],
+    target_height: int = 720,
+    layout: str = "grid",
+    kinect_mode: str = "streams",
+    *,
+    target_width: Optional[int] = None,
+    grid: Optional[Tuple[int, int]] = None,   # (rows, cols) o None=auto
+    max_tiles: Optional[int] = None,          # límite de fuentes a mostrar
+    prefer_aspect: float = 16/9,
+    max_cols: int = 6,
+    show_labels: bool = True,
+    pad_color: Tuple[int, int, int] = PAD_COLOR,
+    kinect_first: bool = True                 # ordena Kinect primero
+) -> Optional[np.ndarray]:
+    """
+    Construye un mosaico responsivo:
+      - Auto elige matriz (rows x cols) según aspect del contenedor.
+      - Si target_width y target_height están definidos, el mosaico NO excede ese rectángulo.
+      - Cada tile se letterboxea (no deforma).
+      - 'grid=(r,c)' fuerza tamaño de grilla.
+      - 'max_tiles' limita cuántas fuentes se usan.
+    """
     if not frames:
         return None
-    imgs = [(k, v) for k, v in frames.items() if v is not None]
-    if not imgs:
-        return None
 
-    # calcular grid casi cuadrada
-    n = len(imgs)
-    cols = max(1, int(math.ceil(math.sqrt(n))))
-    rows = int(math.ceil(n / cols))
+    # ---- orden de nombres: Kinect primero si se quiere ----
+    names = list(frames.keys())
+    if kinect_first:
+        def _key(n):
+            # orden lógico de streams de Kinect
+            order = {
+                "Kinect RGB": 0, "Kinect Depth": 1,
+                "Kinect IR": 2, "Kinect BodyIndex": 3,
+                "Kinect (Microsoft Kinect v2)": 0
+            }
+            base = 0 if any(n.startswith(k) for k in order.keys()) else 1
+            sub = order.get(n, 99)
+            return (base, sub, n.lower())
+        names.sort(key=_key)
+    else:
+        names.sort()
 
-    # alto de cada tile ~ target_height/rows
-    tile_h = max(180, int(target_height / rows))
-    # ancho: usar relación 16:9 aproximada si no conocemos w/h
-    tile_w = int(tile_h * 16 / 9)
+    if max_tiles is not None and max_tiles > 0:
+        names = names[:max_tiles]
+    N = len(names)
 
-    return _stack_grid(imgs, cols=cols, tile_size=(tile_w, tile_h))
+    # ---- aspect del contenedor destino ----
+    if target_width and target_height and target_width > 0 and target_height > 0:
+        dst_ratio = float(target_width) / float(target_height)
+    else:
+        dst_ratio = float(prefer_aspect)
 
+    # ---- tamaño de grilla ----
+    if grid and grid[0] > 0 and grid[1] > 0:
+        rows, cols = int(grid[0]), int(grid[1])
+    else:
+        rows, cols = _best_grid(N, dst_ratio, max_cols=max_cols)
 
-def build_mosaic(frames, target_height=540, layout="studio", kinect_mode="streams"):
-    if layout == "grid":
-        return build_grid(frames, target_height)
-    return build_studio(frames, target_height, kinect_mode)
+    rows = max(1, rows)
+    cols = max(1, cols)
+
+    # ---- tamaño de cada tile (respeta contenedor si ambos lados dados) ----
+    if target_width and target_height and target_width > 0 and target_height > 0:
+        # Ajuste exacto al rectángulo final
+        tile_w = max(1, target_width // cols)
+        tile_h = max(1, target_height // rows)
+        final_w = tile_w * cols
+        final_h = tile_h * rows
+    else:
+        # Fallback por altura; ancho del tile según prefer_aspect
+        tile_h = max(1, target_height // rows if target_height else 360)
+        tile_w = max(1, int(round(tile_h * prefer_aspect)))
+        final_w = tile_w * cols
+        final_h = tile_h * rows
+
+    # ---- construir tiles ----
+    tiles: List[np.ndarray] = []
+    for name in names:
+        img = _safe_bgr(frames.get(name))
+        thumb = _letterbox(img, (tile_w, tile_h), pad_color=pad_color)
+        if show_labels:
+            thumb = _label(thumb, name)
+        tiles.append(thumb)
+
+    mosaic = _stack_grid(tiles, rows, cols, (tile_w, tile_h))
+
+    # ---- si nos dieron target_width/height, aseguremos encaje exacto ----
+    if target_width and target_height and target_width > 0 and target_height > 0:
+        # Si por división entera sobran píxeles, centramos con letterbox global
+        if mosaic.shape[1] != target_width or mosaic.shape[0] != target_height:
+            mosaic = _letterbox(mosaic, (target_width, target_height), pad_color=pad_color)
+    else:
+        # Garantiza al menos target_height (si se pasó) manteniendo aspect
+        if target_height and mosaic.shape[0] != target_height:
+            # Ajuste vertical “agradable”
+            tgt_w = int(round(final_w * (target_height / float(final_h))))
+            mosaic = _letterbox(mosaic, (tgt_w, target_height), pad_color=pad_color)
+
+    return mosaic

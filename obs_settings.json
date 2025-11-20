@@ -1,8 +1,13 @@
 {
   "layout": "studio",
-  "kinect_mode": "composite",
+  "kinect_mode": "streams",
   "include_webcams": true,
   "target_height": 540,
+  "prefer_aspect": 1.7777777777777777,
+  "max_cols": 6,
+  "max_tiles": 6,
+  "grid_override": null,
+  "show_labels": true,
   "record_fps": 30,
   "record_codec": "mp4v",
   "record_scale": 0.6667,
@@ -13,5 +18,18 @@
   "exclude_indices": [
     1
   ],
-  "exclude_name_contains": []
+  "exclude_name_contains": [],
+  "pc_every_n": 10,
+  "pc_decimate": 2,
+  "pc_colorize": true,
+  "pc_prefer_mapper": true,
+  "viewer_fov": 90.0,
+  "viewer_clip_near": 0.01,
+  "viewer_clip_far": 12000.0,
+  "viewer_point_size": 3.0,
+  "viewer_accumulate": true,
+  "viewer_accum_budget": 1800000,
+  "viewer_voxel_size": 0.02,
+  "viewer_autofit": "once",
+  "use_opengl": true
 }
