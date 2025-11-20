@@ -3,10 +3,15 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import annotations
+from typing import Optional, Tuple, Literal
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
 
+# -----------------------------------------------------------------------------
+# OpenGL backend (pyqtgraph)
+# -----------------------------------------------------------------------------
 try:
+    import pyqtgraph as pg
     import pyqtgraph.opengl as gl
     _HAS_GL = True
 except Exception:
@@ -14,7 +19,11 @@ except Exception:
     _HAS_GL = False
 
 
+# -----------------------------------------------------------------------------
+# Helpers numéricos
+# -----------------------------------------------------------------------------
 def _finite_mask(a: np.ndarray) -> np.ndarray:
+    """Máscara True donde todas las coords son finitas."""
     if a is None or a.size == 0:
         return np.zeros((0,), dtype=bool)
     if a.ndim != 2 or a.shape[1] != 3:
@@ -22,7 +31,8 @@ def _finite_mask(a: np.ndarray) -> np.ndarray:
     return np.isfinite(a).all(axis=1)
 
 
-def _bbox_center_radius(pts: np.ndarray) -> tuple[np.ndarray, float]:
+def _bbox_center_radius(pts: np.ndarray) -> Tuple[np.ndarray, float]:
+    """Centro (cx,cy,cz) y radio (esfera que cubre el bbox)."""
     mn = pts.min(axis=0)
     mx = pts.max(axis=0)
     center = (mn + mx) * 0.5
@@ -33,6 +43,7 @@ def _bbox_center_radius(pts: np.ndarray) -> tuple[np.ndarray, float]:
 
 
 def _fit_distance_for_fov(radius: float, fov_deg: float, safety: float = 1.4) -> float:
+    """Distancia necesaria para que el bbox quepa con FOV vertical."""
     fov = max(10.0, min(120.0, float(fov_deg)))
     theta = np.deg2rad(fov * 0.5)
     base = radius / max(1e-6, np.tan(theta))
@@ -40,41 +51,57 @@ def _fit_distance_for_fov(radius: float, fov_deg: float, safety: float = 1.4) ->
 
 
 def _voxel_downsample(pts: np.ndarray,
-                      colors: np.ndarray | None,
-                      voxel: float) -> tuple[np.ndarray, np.ndarray | None]:
+                      colors: Optional[np.ndarray],
+                      voxel: float) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    """Downsample rápido por vóxel (elige primer punto por celda)."""
     if voxel is None or voxel <= 0:
         return pts, colors
     if pts is None or pts.size == 0:
         return pts, colors
+
     grid = np.floor(pts / float(voxel)).astype(np.int32, copy=False)
     key = (grid[:, 0].astype(np.int64) * 73856093 ^
            grid[:, 1].astype(np.int64) * 19349663 ^
            grid[:, 2].astype(np.int64) * 83492791)
     _, idx = np.unique(key, return_index=True)
     idx = np.sort(idx)
+
     pts_ds = pts[idx]
     cols_ds = colors[idx] if (colors is not None and colors.shape[0] == pts.shape[0]) else None
     return pts_ds, cols_ds
 
 
+# -----------------------------------------------------------------------------
+# Widget principal
+# -----------------------------------------------------------------------------
 class PointCloudWidget(QtWidgets.QWidget):
     """
-    Visor 3D para nubes con:
-      - Auto-fit (una sola vez) al primer update.
-      - Ajuste FOV y clip planes.
-      - Acumulación opcional de frames.
-      - Downsample por vóxel.
-      - Tamaño de punto configurable.
+    Visor 3D para nubes:
+      - FOV y planos de recorte configurables.
+      - Auto-fit del encuadre (una vez o continuo).
+      - Acumulación de frames con presupuesto de puntos.
+      - Downsample por vóxel para aliviar carga.
+      - Tamaño de punto ajustable.
+      - Ejes y grilla opcionales.
 
-    API:
+    API (compat con ObsWindow):
       set_point_size(px: float)
       set_fov(deg: float)
       set_clip(near: float, far: float)
-      set_auto_fit(enabled: bool)
+      set_auto_fit(enabled: bool)               # 'once' si True, 'off' si False
+      set_auto_fit_mode(mode: Literal['off','once','continuous'])
       set_accumulate(enabled: bool, max_points: int = 2_000_000)
-      set_voxel_size(voxel_m: float | None)
+      set_voxel_size(voxel_m: Optional[float])
+      set_orbit(elev: float, azim: float, dist: Optional[float] = None)
+      set_center(x: float, y: float, z: float)
+      set_axes_visible(flag: bool)
+      set_grid_visible(flag: bool)
       clear_cloud()
-      update_cloud(points, colors=None, auto_fit: bool | None = None)
+      fit_now()
+
+      update_cloud(points: (N,3) float32 m,
+                   colors: Optional[(N,3) uint8] = None,
+                   auto_fit: Optional[bool] = None)
     """
 
     def __init__(self, parent=None):
@@ -84,59 +111,88 @@ class PointCloudWidget(QtWidgets.QWidget):
 
         if not _HAS_GL:
             lab = QtWidgets.QLabel(
-                "Instala pyqtgraph[opengl] para ver 3D:\n\npip install pyqtgraph PyOpenGL"
+                "Visor 3D deshabilitado.\n\n"
+                "Instala el backend OpenGL:\n"
+                "  pip install pyqtgraph PyOpenGL PyOpenGL-accelerate"
             )
             lab.setStyleSheet("color:#ccc; padding:16px;")
             lab.setAlignment(QtCore.Qt.AlignCenter)
             layout.addWidget(lab)
+            # Estados mínimos para que no explote al llamar setters
             self.view = None
             self.scatter = None
+            self.axes = None
+            self.grid = None
             self._point_size = 3.0
-            self._auto_fit_on_first = True
+            self._auto_fit_mode: Literal['off','once','continuous'] = 'off'
             self._did_fit_once = False
             self._accumulate = False
             self._accum_pts = None
             self._accum_cols = None
             self._accum_budget = 2_000_000
-            self._voxel_m = None
+            self._voxel_m: Optional[float] = None
             return
 
-        # --- Vista ---
+        # --- Vista GL ---
         self.view = gl.GLViewWidget()
         layout.addWidget(self.view, 1)
 
+        # Fondo (oscuro agradable). En algunas versiones: setBackgroundColor existe en GraphicsView,
+        # GLViewWidget hereda camino similar. Si no, ignore.
+        try:
+            self.view.setBackgroundColor(pg.mkColor(20, 20, 24))
+        except Exception:
+            pass
+
         # Cámara inicial (FOV amplio para ver más campo)
-        self.view.opts['fov'] = 80.0
+        self.view.opts['fov'] = 90.0
         self.view.opts['elevation'] = 20.0
         self.view.opts['azimuth'] = 45.0
-        self.view.opts['distance'] = 2.5
+        self.view.opts['distance'] = 3.0
         self.view.opts['center'] = QtGui.QVector3D(0.0, 0.8, 1.5)
-        self.view.opts['clip'] = (0.01, 5000.0)
+        self.view.opts['clip'] = (0.01, 12000.0)
 
-        # Grid de referencia
+        # Grilla XY
         self.grid = gl.GLGridItem()
         try:
-            self.grid.setSize(x=4, y=4, z=1)
+            self.grid.setSize(x=6, y=6, z=1)
         except Exception:
             self.grid.scale(1, 1, 1)
+        self.grid.setDepthValue(1)  # dibujar por detrás
         self.view.addItem(self.grid)
 
-        # Nube
+        # Ejes (1 m)
+        try:
+            self.axes = gl.GLAxisItem()
+            self.axes.setSize(1.0, 1.0, 1.0)
+            self.axes.translate(0, 0, 0)
+            self.view.addItem(self.axes)
+        except Exception:
+            self.axes = None
+
+        # Nube de puntos
         self.scatter = gl.GLScatterPlotItem()
         self.scatter.setGLOptions('opaque')
         self.view.addItem(self.scatter)
 
         # Estado
-        self._point_size = 3.0
-        self._auto_fit_on_first = True
+        self._point_size = 2.5
+        self._auto_fit_mode: Literal['off','once','continuous'] = 'once'
         self._did_fit_once = False
         self._accumulate = False
-        self._accum_pts = None
-        self._accum_cols = None
+        self._accum_pts: Optional[np.ndarray] = None
+        self._accum_cols: Optional[np.ndarray] = None
         self._accum_budget = 2_000_000
-        self._voxel_m = None
+        self._voxel_m: Optional[float] = None
 
         self.scatter.setData(size=self._point_size)
+
+        # Atajos útiles
+        QtWidgets.QShortcut(QtGui.QKeySequence("R"), self, activated=self.fit_now)         # Re-encuadrar
+        QtWidgets.QShortcut(QtGui.QKeySequence("C"), self, activated=self.clear_cloud)     # Clear nube
+        QtWidgets.QShortcut(QtGui.QKeySequence("G"), self, activated=lambda: self.set_grid_visible(not self.grid.isVisible()))
+        if self.axes is not None:
+            QtWidgets.QShortcut(QtGui.QKeySequence("A"), self, activated=lambda: self.set_axes_visible(not self.axes.isVisible()))
 
     # ----------------- API de control -----------------
     def set_point_size(self, px: float):
@@ -155,7 +211,16 @@ class PointCloudWidget(QtWidgets.QWidget):
             self.view.opts['clip'] = (n, f)
 
     def set_auto_fit(self, enabled: bool):
-        self._auto_fit_on_first = bool(enabled)
+        """Compat: True => 'once', False => 'off'."""
+        self.set_auto_fit_mode('once' if enabled else 'off')
+
+    def set_auto_fit_mode(self, mode: Literal['off','once','continuous']):
+        mode = str(mode).lower()
+        if mode not in ('off', 'once', 'continuous'):
+            mode = 'once'
+        self._auto_fit_mode = mode
+        if mode != 'once':
+            self._did_fit_once = False  # rearmar
 
     def set_accumulate(self, enabled: bool, max_points: int = 2_000_000):
         self._accumulate = bool(enabled)
@@ -164,35 +229,73 @@ class PointCloudWidget(QtWidgets.QWidget):
             self._accum_pts = None
             self._accum_cols = None
 
-    def set_voxel_size(self, voxel_m: float | None):
+    def set_voxel_size(self, voxel_m: Optional[float]):
+        """None/<=0 desactiva. Valores típicos: 0.01–0.03 m."""
         if voxel_m is None or voxel_m <= 0:
             self._voxel_m = None
         else:
             self._voxel_m = float(voxel_m)
 
+    def set_orbit(self, elev: float, azim: float, dist: Optional[float] = None):
+        if not self.view:
+            return
+        self.view.opts['elevation'] = float(elev)
+        self.view.opts['azimuth'] = float(azim)
+        if dist is not None:
+            self.view.opts['distance'] = float(dist)
+
+    def set_center(self, x: float, y: float, z: float):
+        if self.view:
+            self.view.opts['center'] = QtGui.QVector3D(float(x), float(y), float(z))
+
+    def set_axes_visible(self, flag: bool):
+        if self.axes is not None:
+            self.axes.setVisible(bool(flag))
+
+    def set_grid_visible(self, flag: bool):
+        if self.grid is not None:
+            self.grid.setVisible(bool(flag))
+
     def clear_cloud(self):
         self._accum_pts = None
         self._accum_cols = None
+        self._did_fit_once = False
         if self.scatter:
             self.scatter.setData(pos=np.zeros((0, 3), dtype=np.float32))
 
-    # ----------------- Render -----------------
+    def fit_now(self):
+        """Forzar auto-fit al contenido actualmente dibujado."""
+        if not (self.view and self.scatter):
+            return
+        data = self.scatter.opts.get('pos', None)
+        if data is None or data.size == 0:
+            return
+        try:
+            self._apply_fit(np.asarray(data))
+            self._did_fit_once = True
+        except Exception:
+            pass
+
+    # ----------------- Render / actualización -----------------
     def _apply_fit(self, pts_valid: np.ndarray):
+        """Sitúa cámara/centro para que el bbox quepa con el FOV actual."""
         if pts_valid is None or pts_valid.size == 0 or self.view is None:
             return
         center, radius = _bbox_center_radius(pts_valid)
         self.view.opts['center'] = QtGui.QVector3D(float(center[0]),
                                                    float(center[1]),
                                                    float(center[2]))
-        dist = _fit_distance_for_fov(radius, self.view.opts.get('fov', 80.0))
+        dist = _fit_distance_for_fov(radius, self.view.opts.get('fov', 90.0))
         self.view.opts['distance'] = dist
+        # redimensiona la grilla a la planta XY del bbox
         try:
             s = max(2.0, float(radius) * 2.5)
             self.grid.setSize(x=s, y=s, z=1)
         except Exception:
             pass
 
-    def _update_accum(self, pts: np.ndarray, cols: np.ndarray | None):
+    def _update_accum(self, pts: np.ndarray, cols: Optional[np.ndarray]):
+        """Acumula puntos hasta un presupuesto; FIFO simple."""
         if pts is None or pts.size == 0:
             return
         if self._accum_pts is None:
@@ -205,24 +308,37 @@ class PointCloudWidget(QtWidgets.QWidget):
                     self._accum_cols = cols.copy()
                 else:
                     self._accum_cols = np.vstack((self._accum_cols, cols))
+
+        # recorta si excede el presupuesto
         if self._accum_pts.shape[0] > self._accum_budget:
             k = self._accum_pts.shape[0] - self._accum_budget
             self._accum_pts = self._accum_pts[k:, :]
             if self._accum_cols is not None:
                 self._accum_cols = self._accum_cols[k:, :]
 
-    def update_cloud(self, points: np.ndarray, colors: np.ndarray | None = None, auto_fit: bool | None = None):
+    def update_cloud(self,
+                     points: np.ndarray,
+                     colors: Optional[np.ndarray] = None,
+                     auto_fit: Optional[bool] = None):
+        """
+        Dibuja nueva nube:
+          - Si accumulate=True, agrega al buffer y dibuja el total.
+          - Si voxel_size>0, hace downsample antes de dibujar.
+          - auto_fit: None→usa modo; True/False→fuerza en esta llamada.
+        """
         if self.view is None or self.scatter is None:
             return
         if points is None or points.size == 0:
             return
 
+        # Filtra no finitos
         m = _finite_mask(points)
         if m.sum() == 0:
             return
         pts = points[m].astype(np.float32, copy=False)
         cols = colors[m] if (colors is not None and colors.shape[0] == points.shape[0]) else None
 
+        # Acumulación
         if self._accumulate:
             self._update_accum(pts, cols)
             pts_draw = self._accum_pts
@@ -231,18 +347,36 @@ class PointCloudWidget(QtWidgets.QWidget):
             pts_draw = pts
             cols_draw = cols
 
+        # Downsample por vóxel (opcional)
         if self._voxel_m and self._voxel_m > 0:
             pts_draw, cols_draw = _voxel_downsample(pts_draw, cols_draw, self._voxel_m)
 
+        if pts_draw is None or pts_draw.size == 0:
+            return
+
+        # Colores a 0..1
         if cols_draw is not None and cols_draw.shape[0] == pts_draw.shape[0]:
             c = (cols_draw.astype(np.float32) / 255.0)
         else:
             c = np.ones((pts_draw.shape[0], 3), dtype=np.float32) * 0.85
 
+        # Pinta
         self.scatter.setData(pos=pts_draw, color=c, size=self._point_size)
 
-        do_fit = self._auto_fit_on_first if (auto_fit is None) else bool(auto_fit)
-        if do_fit and not self._did_fit_once:
+        # Auto-fit
+        if auto_fit is None:
+            if self._auto_fit_mode == 'continuous':
+                try:
+                    self._apply_fit(pts_draw)
+                except Exception:
+                    pass
+            elif self._auto_fit_mode == 'once' and not self._did_fit_once:
+                try:
+                    self._apply_fit(pts_draw)
+                    self._did_fit_once = True
+                except Exception:
+                    pass
+        elif bool(auto_fit):
             try:
                 self._apply_fit(pts_draw)
                 self._did_fit_once = True
